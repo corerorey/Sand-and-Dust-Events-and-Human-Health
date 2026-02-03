@@ -25,7 +25,7 @@ This repository is designed as a **research framework** rather than a single “
 - [8. Recommended minimal variable set](#8-recommended-minimal-variable-set)
 - [9. Evaluation, diagnostics, and reproducibility](#9-evaluation-diagnostics-and-reproducibility)
 - [10. Data resources (links + formats)](#10-data-resources-links--formats)
-- [11. References & Review](#11-references)
+- [11. References \& Review](#11-references--review)
 
 ---
 
@@ -307,7 +307,7 @@ https://wmo.int/site/knowledge-hub/governance/research-board/environmental-pollu
 
 ---
 
-## 11. References & Review
+## 11. References \& Review
 
 This repository builds on the environmental epidemiology and ML/causal inference literature, including (non-exhaustive):
 
