@@ -25,7 +25,7 @@ This repository is designed as a **research framework** rather than a single “
 - [8. Recommended minimal variable set](#8-recommended-minimal-variable-set)
 - [9. Evaluation, diagnostics, and reproducibility](#9-evaluation-diagnostics-and-reproducibility)
 - [10. Data resources (links + formats)](#10-data-resources-links--formats)
-- [11. References](#11-references)
+- [11. References & Review](#11-references)
 
 ---
 
@@ -307,7 +307,7 @@ https://wmo.int/site/knowledge-hub/governance/research-board/environmental-pollu
 
 ---
 
-## 11. References
+## 11. References & Review
 
 This repository builds on the environmental epidemiology and ML/causal inference literature, including (non-exhaustive):
 
@@ -320,3 +320,41 @@ This repository builds on the environmental epidemiology and ML/causal inference
 - Du, Qin, Wang, Zhou (2024). *Avoiding Undesired Future with Minimal Cost in Non-Stationary Environments.* (NeurIPS).
 
 If you use this repository in academic work, please cite it and the relevant original papers.
+
+For the part of the repository focusing on SDS science, key representative sources include:
+
+| Theme                              | Representative sources      | Core contribution                                                                                                 |
+| ---------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Global SDS coordination & warning  | WMO SDS-WAS                 | Coordinated global SDS research/forecasting network; early warning goals ([World Meteorological Organization][1]) |
+| Dust atmospheric process & impacts | WMO SDS background          | Dust interacts with radiation/clouds; climate relevance ([World Meteorological Organization][2])                  |
+| Dust emission physics              | Shao (dust emission scheme) | Strong dependence on friction velocity and soil factors ([geomet.uni-koeln.de][3])                                |
+| Emission scheme sensitivity        | Zhao et al. (East Asia)     | Soil moisture & vegetation drive differences across schemes ([ResearchGate][4])                                   |
+| Inverse constraints on dust cycle  | Kok et al. (ACP)            | Observation-constrained dust cycle reduces concentration/deposition errors ([acp.copernicus.org][5])              |
+| High-resolution AOD retrieval      | MODIS MAIAC                 | Daily ~1 km AOD supports regional footprint detection ([Google for Developers][6])                                |
+| Composition reanalysis             | CAMS reanalysis             | 3D time-consistent composition fields incl. aerosols ([ECMWF][7])                                                 |
+
+[1]: https://wmo.int/site/knowledge-hub/governance/research-board/environmental-pollution-and-atmospheric-chemistry-scientific-steering-committee-ssc-epac/sand-and-dust-storms-warning-advisory-and-assessment-system?utm_source=chatgpt.com "Sand and Dust Storms Warning Advisory and Assessment System"
+[2]: https://wmo.int/sds-about?utm_source=chatgpt.com "SDS about - wmo.int"
+[3]: https://geomet.uni-koeln.de/fileadmin/Dokumente/Arbeitsgruppen/Meteorologie/Shao__Yaping/pdfs/Shao_2004_Simplification_dustemission_scheme.pdf?utm_source=chatgpt.com "Simplification of a dust emission scheme and comparison with data"
+[4]: https://www.researchgate.net/profile/Yaping-Shao/publication/253661905_An_assessment_of_dust_emission_schemes_in_modeling_East_Asian_dust_storms/links/553b69540cf245bdd7647a7b/An-assessment-of-dust-emission-schemes-in-modeling-East-Asian-dust-storms.pdf?utm_source=chatgpt.com "jd005746 1..11 - ResearchGate"
+[5]: https://acp.copernicus.org/articles/21/8127/2021/?utm_source=chatgpt.com "ACP - Improved representation of the global dust cycle using ..."
+[6]: https://developers.google.com/earth-engine/datasets/catalog/MODIS_061_MCD19A2_GRANULES?utm_source=chatgpt.com "MCD19A2.061: Terra & Aqua MAIAC Land Aerosol Optical Depth Daily 1km ..."
+[7]: https://www.ecmwf.int/en/forecasts/dataset/cams-global-reanalysis?utm_source=chatgpt.com "CAMS global reanalysis | ECMWF"
+
+For the part of the repository focusing on SDS–health links, key representative sources include:
+
+| Domain                         | Representative sources                                | What they contribute                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public health framing          | WHO SDS fact sheet                                    | Health impacts and mitigation framing ([World Health Organization][1])                                                                                                                                                                                                                                                                                      |
+| Global evidence synthesis      | Global systematic review of dust storm health impacts | Broad categorization of short/long-term outcomes ([journals.sagepub.com][2])                                                                                                                                                                                                                                                                                |
+| Microbial/infectious dimension | Systematic review on microorganisms & infections      | Evidence synthesis + geographic imbalance, limitations ([MDPI][3])                                                                                                                                                                                                                                                                                          |
+| Large-scale SDS mortality      | China multi-site time-series evidence                 | Multi-cause mortality risks with SDS events ([Nature][4])                                                                                                                                                                                                                                                                                                   |
+| Regional infectious case study | Dust events & measles in Gansu (Hexi–Lanzhou)         | Disease-specific SDS association in NW China ([ScienceDirect][5])                                                                                                                                                                                                                                                                                           |
+| Mechanistic plausibility       | Air pollution health mechanisms review                | Size-dependent penetration; immune/inflammation pathways 【47:14†Manisalidis et al. - 2020 - Environmental and Health Impacts of Air Pollution A Review.pdf†L25-L42】【47:6†Manisalidis et al. - 2020 - Environmental and Health Impacts of Air Pollution A Review.pdf†L1-L9】                                                                                  |
+| Causal/AI methods              | Time-varying causal inference; ML-aided SCM           | Interpretable, robust causal reasoning on environmental time series 【47:10†Han et al. - 2024 - Interpretable AI-driven causal inference to uncover the time-varying effects of PM2.5 and public hea.pdf†L1-L16】【148:14†Kang et al. - 2021 - Machine learning-aided causal inference framework for environmental data analysis A COVID-19 case s.pdf†L8-L30】 |
+
+[1]: https://www.who.int/news-room/fact-sheets/detail/sand-and-dust-storms?utm_source=chatgpt.com "Sand and dust storms - World Health Organization (WHO)"
+[2]: https://journals.sagepub.com/doi/pdf/10.1177/11786302211018390?utm_source=chatgpt.com "Global Health Impacts of Dust Storms: A Systematic Review"
+[3]: https://www.mdpi.com/1660-4601/19/11/6907?utm_source=chatgpt.com "Infectious Diseases Associated with Desert Dust Outbreaks: A Systematic ..."
+[4]: https://www.nature.com/articles/s41467-023-42530-w.pdf?utm_source=chatgpt.com "Mortality risks from a spectrum of causes associated with sand and dust ..."
+[5]: https://www.sciencedirect.com/science/article/pii/S1352231017301346?utm_source=chatgpt.com "Assessment for the impact of dust events on measles incidence in ..."
