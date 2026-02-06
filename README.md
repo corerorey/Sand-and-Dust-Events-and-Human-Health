@@ -298,11 +298,24 @@ https://aeronet.gsfc.nasa.gov/
 OpenAQ API (air quality; JSON/CSV)
 https://docs.openaq.org/
 
-WHO: Sand and dust storms (health framing)
-https://www.who.int/news-room/fact-sheets/detail/sand-and-dust-storms
 
-WMO SDS-WAS (global SDS forecasting coordination)
-https://wmo.int/site/knowledge-hub/governance/research-board/environmental-pollution-and-atmospheric-chemistry-scientific-steering-committee-ssc-epac/sand-and-dust-storms-warning-advisory-and-assessment-system
+MODIS Deep Blue aerosol (AOD；适合亮地/沙漠；HDF，LAADS 获取入口汇总)
+https://earth.gsfc.nasa.gov/climate/data/deep-blue/data
+
+VIIRS Deep Blue aerosol L2 (AERDB_L2；NetCDF4；6 分钟粒度)
+https://www.earthdata.nasa.gov/data/catalog/asips-aerdb-l2-viirs-snpp-nrt-2
+
+OMI/Aura Near-UV Aerosol Index (AI；HDF5；尘/烟吸收性识别常用)
+https://data.nasa.gov/dataset/omi-aura-near-uv-aerosol-index-optical-depth-and-single-scattering-albedo-1-orbit-l2-13x24-778ff
+
+Sentinel-5P TROPOMI Aerosol Index (UVAI；L2；尘追踪常用)
+https://data.nasa.gov/dataset/sentinel-5p-tropomi-aerosol-index-1-orbit-l2-7km-x-3-5km-v1-s5p-l2-aer-ai-at-ges-disc
+
+CALIPSO/CALIOP L2 Aerosol Profile (廓线/垂直结构；尘层高度验证利器)
+https://data.nasa.gov/dataset/calipso-lidar-level-2-aerosol-profile-v4-21-e57f0
+
+MODIS Deep Blue dust storm frequency climatology（沙尘频次/阈值衍生产品；MYDFDS_CLM_GLB_L3）
+https://data.nasa.gov/dataset/climatological-monthly-frequency-of-dust-storm-over-land-for-varying-intensities-based-on-
 ```
 
 ---
