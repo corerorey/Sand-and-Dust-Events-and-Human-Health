@@ -15,18 +15,34 @@ This repository is designed as a **research framework** rather than a single “
 
 ## Table of contents
 
-- [Repository structure](#repository-structure)
-- [1. Repository goals](#1-repository-goals)
-- [2. Data architecture](#2-data-architecture)
-- [3. Exposure engineering for SDS](#3-exposure-engineering-for-sds)
-- [4. Health-risk modeling](#4-health-risk-modeling)
-- [5. Causal inference modules](#5-causal-inference-modules)
-- [6. Machine learning modules](#6-machine-learning-modules)
-- [7. Decision support: rehearsal learning](#7-decision-support-rehearsal-learning)
-- [8. Recommended minimal variable set](#8-recommended-minimal-variable-set)
-- [9. Evaluation, diagnostics, and reproducibility](#9-evaluation-diagnostics-and-reproducibility)
-- [10. Data resources (links + formats)](#10-data-resources-links--formats)
-- [11. References \& Review](#11-references--review)
+- [Sand-and-Dust-Storms-and-Human-Health](#sand-and-dust-storms-and-human-health)
+  - [Table of contents](#table-of-contents)
+  - [Repository structure](#repository-structure)
+  - [1. Repository goals](#1-repository-goals)
+    - [1.1 Problem statement](#11-problem-statement)
+    - [1.2 Event-first philosophy](#12-event-first-philosophy)
+  - [2. Data architecture](#2-data-architecture)
+    - [2.1 Core datasets and typical formats](#21-core-datasets-and-typical-formats)
+    - [2.2 Temporal alignment](#22-temporal-alignment)
+    - [2.3 Spatial alignment](#23-spatial-alignment)
+  - [3. Exposure engineering for SDS](#3-exposure-engineering-for-sds)
+    - [3.1 Event object (recommended data model)](#31-event-object-recommended-data-model)
+    - [3.2 Dust vs. non-dust PM separation](#32-dust-vs-non-dust-pm-separation)
+  - [4. Health-risk modeling](#4-health-risk-modeling)
+    - [4.1 Generalized Additive Models (GAM)](#41-generalized-additive-models-gam)
+    - [4.2 Distributed Lag Nonlinear Models (DLNM)](#42-distributed-lag-nonlinear-models-dlnm)
+    - [4.3 Multi-site analysis](#43-multi-site-analysis)
+  - [5. Causal inference modules](#5-causal-inference-modules)
+  - [6. Machine learning modules](#6-machine-learning-modules)
+    - [6.1 Exposure modeling (high-resolution dust surfaces)](#61-exposure-modeling-high-resolution-dust-surfaces)
+    - [6.2 Risk prediction and classification (TabPFN as a fast baseline)](#62-risk-prediction-and-classification-tabpfn-as-a-fast-baseline)
+  - [7. Decision support: rehearsal learning](#7-decision-support-rehearsal-learning)
+    - [7.1 Grad-RH (gradient-based nonlinear rehearsal learning)](#71-grad-rh-gradient-based-nonlinear-rehearsal-learning)
+    - [7.2 AUF-MICNS (avoiding undesired future with minimal cost under non-stationarity)](#72-auf-micns-avoiding-undesired-future-with-minimal-cost-under-non-stationarity)
+  - [8. Recommended minimal variable set](#8-recommended-minimal-variable-set)
+  - [9. Evaluation, diagnostics, and reproducibility](#9-evaluation-diagnostics-and-reproducibility)
+  - [10. Data resources (links + formats)](#10-data-resources-links--formats)
+  - [11. References \& Review](#11-references--review)
 
 ---
 
@@ -54,7 +70,6 @@ Current top-level layout (quick orientation):
 └─ .idea/                          # local IDE metadata (optional)
 ```
 
-As the project expands, you can keep this section updated so contributors can quickly locate code, geospatial assets, and intermediate data outputs.
 
 ---
 
