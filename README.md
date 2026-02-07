@@ -15,6 +15,7 @@ This repository is designed as a **research framework** rather than a single “
 
 ## Table of contents
 
+- [Repository structure](#repository-structure)
 - [1. Repository goals](#1-repository-goals)
 - [2. Data architecture](#2-data-architecture)
 - [3. Exposure engineering for SDS](#3-exposure-engineering-for-sds)
@@ -26,6 +27,34 @@ This repository is designed as a **research framework** rather than a single “
 - [9. Evaluation, diagnostics, and reproducibility](#9-evaluation-diagnostics-and-reproducibility)
 - [10. Data resources (links + formats)](#10-data-resources-links--formats)
 - [11. References \& Review](#11-references--review)
+
+---
+
+## Repository structure
+
+Current top-level layout (quick orientation):
+
+```text
+.
+├─ README.md
+├─ data_prep/
+│  ├─ mapbase/
+│  │  ├─ *.py                      # map-generation and labeling scripts
+│  │  ├─ *.png                     # exported base maps / labeled maps
+│  │  ├─ *.shp, *.shx, *.dbf, *.prj
+│  │  ├─ geoBoundaries-CHN-ADM0-all/
+│  │  ├─ geoBoundaries-CHN-ADM1-all/
+│  │  ├─ geoBoundaries-CHN-ADM2-all/
+│  │  ├─ geoBoundariesCGAZ_ADM0/
+│  │  └─ geoBoundariesCGAZ_ADM1/
+│  └─ webcrawler/
+│     ├─ zonghe.py                 # crawler/processing script
+│     ├─ vision.html               # web page/template artifact
+│     └─ lanzhou_*.csv             # crawled Lanzhou datasets
+└─ .idea/                          # local IDE metadata (optional)
+```
+
+As the project expands, you can keep this section updated so contributors can quickly locate code, geospatial assets, and intermediate data outputs.
 
 ---
 
