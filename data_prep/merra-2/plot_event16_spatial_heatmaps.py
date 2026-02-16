@@ -352,11 +352,16 @@ def _plot_focus_duflux_peak_1x2(
     fig, axes = plt.subplots(
         nrows=1,
         ncols=2,
-        figsize=(12.6, 5.8),
+        figsize=(12.6, 5.2),
         subplot_kw={"projection": ccrs.PlateCarree()},
         dpi=320,
-        constrained_layout=True,
+        constrained_layout=False,
     )
+
+    def _add_compact_cbar(fig_obj, ax_obj, mappable):
+        # Keep colorbar visually proportional to map panel height.
+        cax = ax_obj.inset_axes([1.015, 0.05, 0.04, 0.90])  # [x0, y0, w, h] in axes fraction
+        return fig_obj.colorbar(mappable, cax=cax)
 
     for ax in axes:
         draw_world_adm0_china_highlight_canvas(
@@ -389,7 +394,7 @@ def _plot_focus_duflux_peak_1x2(
         zorder=1,
     )
     _overlay_lanzhou(ax)
-    cbar = fig.colorbar(mesh, ax=ax, shrink=0.88, pad=0.02)
+    cbar = _add_compact_cbar(fig, ax, mesh)
     cbar.set_label(unit if unit else mean_var)
     ax.set_title(f"{long_name}\nMEAN over event window", fontsize=11)
 
@@ -412,7 +417,7 @@ def _plot_focus_duflux_peak_1x2(
         zorder=1,
     )
     _overlay_lanzhou(ax)
-    cbar = fig.colorbar(mesh, ax=ax, shrink=0.88, pad=0.02)
+    cbar = _add_compact_cbar(fig, ax, mesh)
     start_local = start_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
     ticks = np.linspace(0.0, max_hours, 6)
     cbar.set_ticks(ticks)
@@ -429,8 +434,9 @@ def _plot_focus_duflux_peak_1x2(
             f"UTC: {start_utc} to {end_utc} | Local(UTC+8): {start_local} to {end_local}"
         ),
         fontsize=13,
-        y=1.02,
+        y=0.965,
     )
+    fig.subplots_adjust(left=0.055, right=0.985, bottom=0.075, top=0.86, wspace=0.26)
 
     out_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_png, dpi=350, bbox_inches="tight")
