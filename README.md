@@ -17,7 +17,8 @@ This repository is designed as a **research framework** rather than a single “
 
 - [Sand-and-Dust-Storms-and-Human-Health](#sand-and-dust-storms-and-human-health)
   - [Table of contents](#table-of-contents)
-  - [Repository structure](#repository-structure)
+- [Preview](#preview)
+  - [MERRA-2 Event Spatial Heatmaps (Example)](#merra-2-event-spatial-heatmaps-example)
   - [1. Repository goals](#1-repository-goals)
     - [1.1 Problem statement](#11-problem-statement)
     - [1.2 Event-first philosophy](#12-event-first-philosophy)
@@ -46,7 +47,7 @@ This repository is designed as a **research framework** rather than a single “
 
 ---
 
-## Repository structure
+<!-- ## Repository structure
 
 Current top-level layout (quick orientation):
 
@@ -68,11 +69,11 @@ Current top-level layout (quick orientation):
 │     ├─ vision.html               # web page/template artifact
 │     └─ lanzhou_*.csv             # crawled Lanzhou datasets
 └─ .idea/                          # local IDE metadata (optional)
-```
+``` -->
 
 
 ---
-
+# Preview
 ## MERRA-2 Event Spatial Heatmaps (Example)
 
 Event window used for this example:
