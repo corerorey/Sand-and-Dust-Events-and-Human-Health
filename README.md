@@ -87,6 +87,13 @@ Outputs:
 - Mean-field heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png`
 - Max-field heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_max_heatmaps.png`
 
+How `mean` and `max` are computed:
+- Statistics are computed per grid cell over the event time window (not spatially averaged over the map).
+- `mean` heatmap at `(lat, lon)`: time-average during the event, i.e. `mean_t V(t, lat, lon)`.
+- `max` heatmap at `(lat, lon)`: time-maximum during the event, i.e. `max_t V(t, lat, lon)`.
+- Interpretation: `mean` reflects sustained event intensity; `max` reflects peak intensity.
+- Variables shown: `DUSMASS`, `DUCMASS`, `DUEXTTAU`, `DUSCATAU`, and `DUFLUX_MAG` where `DUFLUX_MAG = sqrt(DUFLUXU^2 + DUFLUXV^2)`.
+
 **Event 16 spatial mean heatmaps**
 
 ![Event 16 spatial mean heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png)
