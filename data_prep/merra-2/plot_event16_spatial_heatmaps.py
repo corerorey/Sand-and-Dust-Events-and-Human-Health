@@ -333,6 +333,110 @@ def _plot_metric_panels(
     plt.close(fig)
 
 
+def _plot_focus_duflux_peak_1x2(
+    ds_evt: xr.Dataset,
+    extent: tuple[float, float, float, float],
+    out_png: Path,
+    event_id: int,
+    start_utc: pd.Timestamp,
+    end_utc: pd.Timestamp,
+):
+    draw_world_adm0_china_highlight_canvas = _setup_mapbase_import()
+    mean_var = "DUFLUX_MAG"
+    peak_var = PEAK_TIME_VAR
+    if mean_var not in ds_evt.data_vars:
+        raise RuntimeError(f"Required variable not found for 1x2 output: {mean_var}")
+    if peak_var not in ds_evt.data_vars:
+        raise RuntimeError(f"Required variable not found for 1x2 output: {peak_var}")
+
+    fig, axes = plt.subplots(
+        nrows=1,
+        ncols=2,
+        figsize=(12.6, 5.8),
+        subplot_kw={"projection": ccrs.PlateCarree()},
+        dpi=320,
+        constrained_layout=True,
+    )
+
+    for ax in axes:
+        draw_world_adm0_china_highlight_canvas(
+            ax=ax,
+            extent=extent,
+            draw_grid=True,
+            show_country_labels=False,
+            processing_extent=extent,
+            neighbor_linewidth=0.36,
+            china_linewidth=1.1,
+            china_edgecolor="#5a5a5a",
+            china_alpha=0.72,
+            omit_shared_with_china=True,
+        )
+
+    # Left panel: mean DUFLUX_MAG
+    ax = axes[0]
+    mean_field = ds_evt[mean_var].mean(dim="time", skipna=True)
+    mean_vals = mean_field.values
+    mean_norm = _panel_norm(mean_vals, "mean")
+    long_name, unit, cmap = _var_meta(ds_evt, mean_var)
+    mesh = ax.pcolormesh(
+        ds_evt["lon"].values,
+        ds_evt["lat"].values,
+        mean_vals,
+        transform=ccrs.PlateCarree(),
+        cmap=cmap,
+        shading="auto",
+        norm=mean_norm,
+        zorder=1,
+    )
+    _overlay_lanzhou(ax)
+    cbar = fig.colorbar(mesh, ax=ax, shrink=0.88, pad=0.02)
+    cbar.set_label(unit if unit else mean_var)
+    ax.set_title(f"{long_name}\nMEAN over event window", fontsize=11)
+
+    # Right panel: peak time map of DUSMASS
+    ax = axes[1]
+    peak_hours = _peak_time_hours(ds_evt, peak_var)
+    peak_vals = peak_hours.values
+    max_hours = float(((ds_evt["time"].max() - ds_evt["time"].min()) / np.timedelta64(1, "h")).item())
+    if not np.isfinite(max_hours) or max_hours <= 0:
+        max_hours = 1.0
+    peak_norm = mcolors.Normalize(vmin=0.0, vmax=max_hours)
+    mesh = ax.pcolormesh(
+        ds_evt["lon"].values,
+        ds_evt["lat"].values,
+        peak_vals,
+        transform=ccrs.PlateCarree(),
+        cmap=PEAK_TIME_CMAP,
+        shading="auto",
+        norm=peak_norm,
+        zorder=1,
+    )
+    _overlay_lanzhou(ax)
+    cbar = fig.colorbar(mesh, ax=ax, shrink=0.88, pad=0.02)
+    start_local = start_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
+    ticks = np.linspace(0.0, max_hours, 6)
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels([(start_local + pd.Timedelta(hours=float(t))).strftime("%m-%d %H:%M") for t in ticks])
+    cbar.set_label("Local time of peak (UTC+8)")
+    ax.set_title(f"Peak-Time Map ({peak_var})\nTime of maximum over event window", fontsize=11)
+
+    start_local = start_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
+    end_local = end_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
+    fig.suptitle(
+        (
+            f"MERRA-2 Event {event_id} Spatial Focus Maps "
+            f"(1x2: {mean_var} MEAN + {peak_var} PEAK-TIME)\n"
+            f"UTC: {start_utc} to {end_utc} | Local(UTC+8): {start_local} to {end_local}"
+        ),
+        fontsize=13,
+        y=1.02,
+    )
+
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_png, dpi=350, bbox_inches="tight")
+    plt.close(fig)
+
+
 def main():
     plt.rcParams.update(
         {
@@ -349,11 +453,12 @@ def main():
     ds_evt = _load_event_dataset(event_files, start_utc, end_utc)
     extent = _infer_extent(ds_evt)
 
-    out_mean = OUT_DIR / f"event{EVENT_ID}_spatial_mean_heatmaps.png"
-    out_max = OUT_DIR / f"event{EVENT_ID}_spatial_max_heatmaps.png"
-
-    _plot_metric_panels(ds_evt, PLOT_VARS, "mean", extent, out_mean, EVENT_ID, start_utc, end_utc)
-    _plot_metric_panels(ds_evt, PLOT_VARS, "max", extent, out_max, EVENT_ID, start_utc, end_utc)
+    out_focus = OUT_DIR / f"event{EVENT_ID}_spatial_mean_heatmaps.png"
+    # Legacy full-panel outputs are retained via _plot_metric_panels(), but are not called for now:
+    # out_max = OUT_DIR / f"event{EVENT_ID}_spatial_max_heatmaps.png"
+    # _plot_metric_panels(ds_evt, PLOT_VARS, "mean", extent, out_focus, EVENT_ID, start_utc, end_utc)
+    # _plot_metric_panels(ds_evt, PLOT_VARS, "max", extent, out_max, EVENT_ID, start_utc, end_utc)
+    _plot_focus_duflux_peak_1x2(ds_evt, extent, out_focus, EVENT_ID, start_utc, end_utc)
 
     print("\nDONE")
     print(f"Event ID         : {EVENT_ID}")
@@ -363,8 +468,7 @@ def main():
     print(f"Files used       : {len(event_files)}")
     for f in event_files:
         print(f"  - {f.name}")
-    print(f"Output mean map  : {out_mean.resolve()}")
-    print(f"Output max map   : {out_max.resolve()}")
+    print(f"Output focus map : {out_focus.resolve()}")
 
 
 if __name__ == "__main__":

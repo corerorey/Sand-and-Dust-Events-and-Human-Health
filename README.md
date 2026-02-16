@@ -82,24 +82,36 @@ Event window used for this example:
 
 Generated from:
 - `data_prep/merra-2/plot_event16_mean_integral_2x3.py`
+- `data_prep/merra-2/plot_event16_spatial_heatmaps.py`
 
 Outputs:
-- 2x3 mean+integral heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_2x3.png`
+- Mass 2x2 mean+integral heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_mass_2x2.png`
+- AOT 2x2 mean+integral heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_aot_2x2.png`
+- Focus 1x2 map (DUFLUX mean + DUSMASS peak-time): `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png`
 
 How `mean` and `time-integrated` are computed:
 - Statistics are computed per grid cell over the event time window (not spatially averaged over the map).
 - `mean` heatmap at `(lat, lon)`: time-average during the event, i.e. `mean_t V(t, lat, lon)`.
 - `time-integrated` heatmap at `(lat, lon)`: event-window accumulation, i.e. `sum_t V(t, lat, lon) * dt` (with `dt` inferred from time-step spacing).
 - Interpretation: `mean` reflects sustained intensity level; `time-integrated` reflects cumulative exposure burden.
-- Variables shown in this 2x3 figure: `DUSMASS`, `DUCMASS`, `DUEXTTAU`.
+- Variables shown:
+  - Mass 2x2: `DUSMASS`, `DUCMASS`
+  - AOT 2x2: `DUEXTTAU`, `DUSCATAU`
 
-**Event 16 spatial mean + time-integrated heatmaps (2x3)**
+<table>
+  <tr>
+    <td align="center"><strong>Event 16 spatial mass mean + time-integrated heatmaps (2x2)</strong></td>
+    <td align="center"><strong>Event 16 spatial AOT mean + time-integrated heatmaps (2x2)</strong></td>
+  </tr>
+  <tr>
+    <td><img src="data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_mass_2x2.png" alt="Event 16 spatial mass mean + time-integrated heatmaps" width="100%"></td>
+    <td><img src="data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_aot_2x2.png" alt="Event 16 spatial AOT mean + time-integrated heatmaps" width="100%"></td>
+  </tr>
+</table>
 
-![Event 16 spatial mean + time-integrated heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_2x3.png)
+**Event 16 spatial focus map (1x2: DUFLUX_MAG mean + DUSMASS peak-time)**
 
-**Event 16 spatial mean heatmaps (legacy figure)**
-
-![Event 16 spatial mean heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png)
+![Event 16 spatial focus map (1x2)](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png)
 
 ---
 
