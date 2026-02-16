@@ -73,6 +73,30 @@ Current top-level layout (quick orientation):
 
 ---
 
+## MERRA-2 Event Spatial Heatmaps (Example)
+
+Event window used for this example:
+- `event_id = 16`
+- UTC: `2021-06-05 23:30:00` to `2021-06-07 02:30:00`
+- Local (UTC+8): `2021-06-06 07:30:00` to `2021-06-07 10:30:00`
+
+Generated from:
+- `data_prep/merra-2/plot_event16_spatial_heatmaps.py`
+
+Outputs:
+- Mean-field heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png`
+- Max-field heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_max_heatmaps.png`
+
+**Event 16 spatial mean heatmaps**
+
+![Event 16 spatial mean heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png)
+
+**Event 16 spatial max heatmaps**
+
+![Event 16 spatial max heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_max_heatmaps.png)
+
+---
+
 ## 1. Repository goals
 
 ### 1.1 Problem statement
