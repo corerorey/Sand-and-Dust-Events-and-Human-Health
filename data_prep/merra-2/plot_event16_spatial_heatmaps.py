@@ -31,6 +31,7 @@ OUT_DIR = Path(__file__).resolve().parent / "out_dust_events" / "event16_spatial
 PLOT_VARS = ["DUSMASS", "DUCMASS", "DUEXTTAU", "DUSCATAU", "DUFLUX_MAG"]
 BASE_VARS_REQUIRED = ["DUSMASS", "DUCMASS", "DUEXTTAU", "DUSCATAU", "DUFLUXU", "DUFLUXV"]
 PEAK_TIME_VAR = "DUSMASS"
+PEAK_TIME_CMAP = "YlGnBu"  # Early = lighter, late = darker.
 
 LANZHOU_LON = 103.8343
 LANZHOU_LAT = 36.0611
@@ -298,7 +299,7 @@ def _plot_metric_panels(
             ds_evt["lat"].values,
             vals,
             transform=ccrs.PlateCarree(),
-            cmap="twilight_shifted",
+            cmap=PEAK_TIME_CMAP,
             shading="auto",
             norm=norm,
             zorder=1,

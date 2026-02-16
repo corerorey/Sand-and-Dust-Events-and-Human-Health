@@ -97,6 +97,10 @@ How `mean` and `time-integrated` are computed:
 
 ![Event 16 spatial mean + time-integrated heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_2x3.png)
 
+**Event 16 spatial mean heatmaps (legacy figure)**
+
+![Event 16 spatial mean heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png)
+
 ---
 
 ## 1. Repository goals
