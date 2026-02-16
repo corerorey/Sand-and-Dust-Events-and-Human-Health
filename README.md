@@ -81,26 +81,21 @@ Event window used for this example:
 - Local (UTC+8): `2021-06-06 07:30:00` to `2021-06-07 10:30:00`
 
 Generated from:
-- `data_prep/merra-2/plot_event16_spatial_heatmaps.py`
+- `data_prep/merra-2/plot_event16_mean_integral_2x3.py`
 
 Outputs:
-- Mean-field heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png`
-- Max-field heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_max_heatmaps.png`
+- 2x3 mean+integral heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_2x3.png`
 
-How `mean` and `max` are computed:
+How `mean` and `time-integrated` are computed:
 - Statistics are computed per grid cell over the event time window (not spatially averaged over the map).
 - `mean` heatmap at `(lat, lon)`: time-average during the event, i.e. `mean_t V(t, lat, lon)`.
-- `max` heatmap at `(lat, lon)`: time-maximum during the event, i.e. `max_t V(t, lat, lon)`.
-- Interpretation: `mean` reflects sustained event intensity; `max` reflects peak intensity.
-- Variables shown: `DUSMASS`, `DUCMASS`, `DUEXTTAU`, `DUSCATAU`, and `DUFLUX_MAG` where `DUFLUX_MAG = sqrt(DUFLUXU^2 + DUFLUXV^2)`.
+- `time-integrated` heatmap at `(lat, lon)`: event-window accumulation, i.e. `sum_t V(t, lat, lon) * dt` (with `dt` inferred from time-step spacing).
+- Interpretation: `mean` reflects sustained intensity level; `time-integrated` reflects cumulative exposure burden.
+- Variables shown in this 2x3 figure: `DUSMASS`, `DUCMASS`, `DUEXTTAU`.
 
-**Event 16 spatial mean heatmaps**
+**Event 16 spatial mean + time-integrated heatmaps (2x3)**
 
-![Event 16 spatial mean heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png)
-
-**Event 16 spatial max heatmaps**
-
-![Event 16 spatial max heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_max_heatmaps.png)
+![Event 16 spatial mean + time-integrated heatmaps](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_2x3.png)
 
 ---
 

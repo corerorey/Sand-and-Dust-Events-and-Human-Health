@@ -30,6 +30,7 @@ OUT_DIR = Path(__file__).resolve().parent / "out_dust_events" / "event16_spatial
 
 PLOT_VARS = ["DUSMASS", "DUCMASS", "DUEXTTAU", "DUSCATAU", "DUFLUX_MAG"]
 BASE_VARS_REQUIRED = ["DUSMASS", "DUCMASS", "DUEXTTAU", "DUSCATAU", "DUFLUXU", "DUFLUXV"]
+PEAK_TIME_VAR = "DUSMASS"
 
 LANZHOU_LON = 103.8343
 LANZHOU_LAT = 36.0611
@@ -163,6 +164,45 @@ def _var_meta(ds: xr.Dataset, var: str) -> tuple[str, str, str]:
     return long_name, unit, cmap
 
 
+def _overlay_lanzhou(ax):
+    if SHOW_LANZHOU_MARKER:
+        ax.scatter(
+            [LANZHOU_LON],
+            [LANZHOU_LAT],
+            transform=ccrs.PlateCarree(),
+            s=24,
+            marker="o",
+            facecolor="none",
+            edgecolor="black",
+            linewidth=1.0,
+            zorder=6,
+        )
+    if SHOW_LANZHOU_BOX:
+        w, s, e, n = LANZHOU_BOX
+        rect = mpatches.Rectangle(
+            (w, s),
+            e - w,
+            n - s,
+            linewidth=1.2,
+            edgecolor="#1f77b4",
+            facecolor="none",
+            linestyle="-",
+            transform=ccrs.PlateCarree(),
+            zorder=6,
+        )
+        ax.add_patch(rect)
+
+
+def _peak_time_hours(ds_evt: xr.Dataset, var: str) -> xr.DataArray:
+    peak_idx = ds_evt[var].argmax(dim="time", skipna=True)
+    peak_t = ds_evt["time"].isel(time=peak_idx)
+    valid = ds_evt[var].count(dim="time") > 0
+    start_t = ds_evt["time"].min()
+    peak_hours = ((peak_t - start_t) / np.timedelta64(1, "h")).where(valid)
+    peak_hours.attrs["units"] = "hour since event start (UTC)"
+    return peak_hours
+
+
 def _plot_metric_panels(
     ds_evt: xr.Dataset,
     plot_vars: list[str],
@@ -179,7 +219,8 @@ def _plot_metric_panels(
     if not valid_vars:
         raise RuntimeError("No plotting variables available in event dataset.")
 
-    n = len(valid_vars)
+    add_peak_panel = metric == "mean" and PEAK_TIME_VAR in valid_vars
+    n = len(valid_vars) + (1 if add_peak_panel else 0)
     ncols = 3
     nrows = int(math.ceil(n / ncols))
     fig, axes = plt.subplots(
@@ -225,47 +266,63 @@ def _plot_metric_panels(
             zorder=1,
         )
 
-        if SHOW_LANZHOU_MARKER:
-            ax.scatter(
-                [LANZHOU_LON],
-                [LANZHOU_LAT],
-                transform=ccrs.PlateCarree(),
-                s=24,
-                marker="o",
-                facecolor="none",
-                edgecolor="black",
-                linewidth=1.0,
-                zorder=6,
-            )
-        if SHOW_LANZHOU_BOX:
-            w, s, e, n = LANZHOU_BOX
-            rect = mpatches.Rectangle(
-                (w, s),
-                e - w,
-                n - s,
-                linewidth=1.2,
-                edgecolor="#1f77b4",
-                facecolor="none",
-                linestyle="-",
-                transform=ccrs.PlateCarree(),
-                zorder=6,
-            )
-            ax.add_patch(rect)
+        _overlay_lanzhou(ax)
 
         cbar = fig.colorbar(mesh, ax=ax, shrink=0.84, pad=0.02)
         cbar.set_label(unit if unit else var)
         ax.set_title(f"{long_name}\n{metric.upper()} over event window", fontsize=10)
 
-    for j in range(len(valid_vars), len(axes)):
+    if add_peak_panel:
+        ax = axes[len(valid_vars)]
+        draw_world_adm0_china_highlight_canvas(
+            ax=ax,
+            extent=extent,
+            draw_grid=True,
+            show_country_labels=False,
+            processing_extent=extent,
+            neighbor_linewidth=0.36,
+            china_linewidth=1.1,
+            china_edgecolor="#5a5a5a",
+            china_alpha=0.72,
+            omit_shared_with_china=True,
+        )
+
+        peak_hours = _peak_time_hours(ds_evt, PEAK_TIME_VAR)
+        vals = peak_hours.values
+        max_hours = float(((ds_evt["time"].max() - ds_evt["time"].min()) / np.timedelta64(1, "h")).item())
+        if not np.isfinite(max_hours) or max_hours <= 0:
+            max_hours = 1.0
+        norm = mcolors.Normalize(vmin=0.0, vmax=max_hours)
+        mesh = ax.pcolormesh(
+            ds_evt["lon"].values,
+            ds_evt["lat"].values,
+            vals,
+            transform=ccrs.PlateCarree(),
+            cmap="twilight_shifted",
+            shading="auto",
+            norm=norm,
+            zorder=1,
+        )
+        _overlay_lanzhou(ax)
+        cbar = fig.colorbar(mesh, ax=ax, shrink=0.84, pad=0.02)
+        start_local = start_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
+        ticks = np.linspace(0.0, max_hours, 6)
+        cbar.set_ticks(ticks)
+        cbar.set_ticklabels([(start_local + pd.Timedelta(hours=float(t))).strftime("%m-%d %H:%M") for t in ticks])
+        cbar.set_label("Local time of peak (UTC+8)")
+        ax.set_title(f"Peak-Time Map ({PEAK_TIME_VAR})\nTime of maximum over event window", fontsize=10)
+
+    used_panels = len(valid_vars) + (1 if add_peak_panel else 0)
+    for j in range(used_panels, len(axes)):
         axes[j].set_visible(False)
 
     start_local = start_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
     end_local = end_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
+    figure_title = f"MERRA-2 Event {event_id} Spatial Heatmaps ({metric.upper()})"
+    if add_peak_panel:
+        figure_title = f"MERRA-2 Event {event_id} Spatial Heatmaps (MEAN + TIME-OF-PEAK)"
     fig.suptitle(
-        (
-            f"MERRA-2 Event {event_id} Spatial Heatmaps ({metric.upper()})\n"
-            f"UTC: {start_utc} to {end_utc} | Local(UTC+8): {start_local} to {end_local}"
-        ),
+        f"{figure_title}\nUTC: {start_utc} to {end_utc} | Local(UTC+8): {start_local} to {end_local}",
         fontsize=13,
         y=1.02,
     )
