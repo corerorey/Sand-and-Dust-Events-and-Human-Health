@@ -6,10 +6,11 @@ Inputs:
   - Local `.SUB.nc` files (already downloaded)
 Process:
   1) For each daily .SUB.nc:
-       read CRIT_VAR on gridded lat/lon
+       read selected MERRA variables on gridded lat/lon
        compute ROI area-mean over BOX (cos(lat) weighted)
        build hourly time series (UTC + local time)
-  2) Detect dust events from hourly CRIT_VAR and output event-marked hourly/event summary CSVs
+  2) Detect dust events using DUCMASS as primary criterion and DUSMASS as auxiliary criterion
+     and output event-marked hourly/event summary CSVs
   3) Build daily dust metrics and city-compatible CSVs
   4) Build 2021 aligned daily CSV (AQ columns + MERRA daily means)
 
@@ -59,10 +60,16 @@ TARGET_YEAR = 2021
 ALIGNED_DAILY_CSV = f"{CITY_NAME}_aq_merra_daily_aligned_{TARGET_YEAR}.csv"
 
 # ROI box (W, S, E, N)
-BOX = (103.0, 35.5, 104.5, 36.8)
+BOX = (102.0, 35.0, 104.5, 37.0)
 
-# Event metric variable (examples: DUSMASS, DUCMASS, DUEXTTAU)
-CRIT_VAR = "DUSMASS"
+# Event-detection criteria:
+# - primary: DUCMASS
+# - auxiliary: DUSMASS
+PRIMARY_CRIT_VAR = "DUCMASS"
+SECONDARY_CRIT_VAR = "DUSMASS"
+
+# Variables exported in hourly output CSVs (kept compact but include both criteria)
+EXTRACT_VARS = [PRIMARY_CRIT_VAR, SECONDARY_CRIT_VAR]
 
 # Extraction mode over ROI
 EXTRACT_MODE = "area_mean"   # "area_mean" / "area_max" / "nearest"
@@ -71,7 +78,12 @@ EXTRACT_MODE = "area_mean"   # "area_mean" / "area_max" / "nearest"
 LOCAL_TZ_OFFSET_HOURS = 8
 
 # Event detection parameters
-Q = 0.95
+# Primary threshold (high quantile)
+Q_PRIMARY = 0.95
+# Lower primary threshold used with auxiliary criterion support
+Q_PRIMARY_LOW = 0.90
+# Auxiliary threshold for SECONDARY_CRIT_VAR
+Q_SECONDARY = 0.90
 MIN_EVENT_HOURS = 6
 MERGE_GAP_HOURS = 2
 
@@ -288,57 +300,76 @@ def subset_box(ds: xr.Dataset, box: Tuple[float, float, float, float]) -> xr.Dat
     return ds.sel({lat_name: slice(s, n), lon_name: slice(w2, e2)})
 
 
-def extract_hourly_roi_from_file(nc_path: Path, crit_var: str, box: Tuple[float, float, float, float],
-                                 extract_mode: str) -> pd.DataFrame:
+def _reduce_roi_series(
+    da: xr.DataArray,
+    ds: xr.Dataset,
+    box: Tuple[float, float, float, float],
+    lat_name: str,
+    lon_name: str,
+    extract_mode: str,
+) -> np.ndarray:
+    """Reduce one variable over ROI to a 1D time series."""
+    if extract_mode == "nearest":
+        # Use ROI center point
+        w, s, e, n = box
+        lat0 = (s + n) / 2
+        lon0 = (w + e) / 2
+        lon0 = normalize_lon_for_ds(lon0, ds[lon_name])
+        sub = da.sel({lat_name: lat0, lon_name: lon0}, method="nearest")
+        return sub.values
+
+    if extract_mode == "area_max":
+        sub = da.max(dim=(lat_name, lon_name), skipna=True)
+        return sub.values
+
+    if extract_mode == "area_mean":
+        weights = np.cos(np.deg2rad(ds[lat_name]))
+        weights.name = "weights"
+        sub = da.weighted(weights).mean(dim=(lat_name, lon_name), skipna=True)
+        return sub.values
+
+    raise RuntimeError(f"Unknown EXTRACT_MODE={extract_mode}")
+
+
+def extract_hourly_roi_from_file(
+    nc_path: Path,
+    extract_vars: List[str],
+    box: Tuple[float, float, float, float],
+    extract_mode: str,
+) -> pd.DataFrame:
     ds = xr.open_dataset(nc_path, engine="netcdf4")
     try:
         if "time" not in ds.coords:
             raise RuntimeError(f"{nc_path.name} has no time coordinate.")
-        if crit_var not in ds.variables:
-            raise RuntimeError(f"{nc_path.name} does not contain variable {crit_var}.")
 
         ds = subset_box(ds, box)
         lat_name, lon_name = guess_latlon_names(ds)
 
-        da = ds[crit_var]  # dims time, lat, lon (usually)
-
-        if extract_mode == "nearest":
-            # Use ROI center point
-            w, s, e, n = box
-            lat0 = (s + n) / 2
-            lon0 = (w + e) / 2
-            lon0 = normalize_lon_for_ds(lon0, ds[lon_name])
-            sub = da.sel({lat_name: lat0, lon_name: lon0}, method="nearest")
-            vals = sub.values
-
-        elif extract_mode == "area_max":
-            sub = da.max(dim=(lat_name, lon_name), skipna=True)
-            vals = sub.values
-
-        elif extract_mode == "area_mean":
-            weights = np.cos(np.deg2rad(ds[lat_name]))
-            weights.name = "weights"
-            sub = da.weighted(weights).mean(dim=(lat_name, lon_name), skipna=True)
-            vals = sub.values
-
-        else:
-            raise RuntimeError(f"Unknown EXTRACT_MODE={extract_mode}")
-
         t_utc = pd.to_datetime(ds["time"].values)
         t_local = t_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
 
-        return pd.DataFrame({
+        out = pd.DataFrame({
             "datetime_utc": t_utc,
             "datetime_local": t_local,
-            crit_var: vals
         })
+        for var in extract_vars:
+            if var not in ds.variables:
+                out[var] = np.nan
+                continue
+            da = ds[var]  # dims time, lat, lon (usually)
+            out[var] = _reduce_roi_series(da, ds, box, lat_name, lon_name, extract_mode)
+        return out
 
     finally:
         ds.close()
 
 
-def build_hourly_timeseries(nc_files: List[Path], crit_var: str, box: Tuple[float, float, float, float],
-                            extract_mode: str) -> pd.DataFrame:
+def build_hourly_timeseries(
+    nc_files: List[Path],
+    extract_vars: List[str],
+    box: Tuple[float, float, float, float],
+    extract_mode: str,
+) -> pd.DataFrame:
     frames = []
     bad_files = []
     for i, fp in enumerate(sorted(nc_files), 1):
@@ -352,7 +383,7 @@ def build_hourly_timeseries(nc_files: List[Path], crit_var: str, box: Tuple[floa
 
         print(f"[READ] ({i}/{len(nc_files)}) {fp.name}")
         try:
-            frames.append(extract_hourly_roi_from_file(fp, crit_var, box, extract_mode))
+            frames.append(extract_hourly_roi_from_file(fp, extract_vars, box, extract_mode))
         except Exception as e:
             bad_files.append(fp)
             print(f"[SKIP] ({i}/{len(nc_files)}) {fp.name} failed to parse: {e}")
@@ -371,61 +402,61 @@ def build_hourly_timeseries(nc_files: List[Path], crit_var: str, box: Tuple[floa
     return ts
 
 
-# Event detection (start/end + criterion statistics)
-def detect_events(ts: pd.DataFrame, crit_var: str, q: float,
-                  min_hours: int, merge_gap_hours: int) -> Tuple[pd.DataFrame, float, pd.Series, pd.Series]:
-    """Detect dust events and return event summary plus hourly labels."""
-    s = pd.Series(ts[crit_var].values, index=pd.to_datetime(ts["datetime_local"]))
-    s = s.dropna().sort_index()
-    if s.empty:
-        thr = np.nan
+# Event detection (DUCMASS primary, DUSMASS auxiliary)
+def detect_events(
+    ts: pd.DataFrame,
+    primary_var: str,
+    secondary_var: str,
+    q_primary: float,
+    q_primary_low: float,
+    q_secondary: float,
+    min_hours: int,
+    merge_gap_hours: int,
+) -> Tuple[pd.DataFrame, Dict[str, float], pd.Series, pd.Series]:
+    """Detect dust events and return event summary plus hourly labels.
+
+    Composite exceedance rule:
+      exceed = (primary > thr_primary) OR ((primary > thr_primary_low) AND (secondary > thr_secondary))
+    This keeps primary criterion dominant and uses secondary criterion as support.
+    """
+    full_index = pd.DatetimeIndex(pd.to_datetime(ts["datetime_local"]).to_numpy())
+    s_primary = pd.Series(ts[primary_var].to_numpy(), index=full_index).sort_index()
+    has_secondary = secondary_var in ts.columns and pd.api.types.is_numeric_dtype(ts[secondary_var])
+    s_secondary = pd.Series(ts[secondary_var].to_numpy(), index=full_index).sort_index() if has_secondary else None
+
+    s_valid = s_primary.dropna()
+    if s_valid.empty:
+        thresholds = {"primary": np.nan, "primary_low": np.nan, "secondary": np.nan}
         events = pd.DataFrame(columns=[
             "event_id", "start_local", "end_local", "start_utc", "end_utc",
             "duration_hours", "mean_crit_span", "mean_crit_exceed", "max_crit",
-            "threshold", "exceed_fraction"
+            "threshold", "exceed_fraction",
+            "primary_var", "secondary_var",
+            "threshold_primary", "threshold_primary_low", "threshold_secondary",
+            "mean_secondary_span", "mean_secondary_exceed", "max_secondary",
+            "exceed_primary_fraction", "exceed_support_fraction", "exceed_composite_fraction",
         ])
-        return events, thr, pd.Series(dtype=int), pd.Series(dtype=int)
+        return events, thresholds, pd.Series(0, index=full_index), pd.Series(0, index=full_index)
 
-    thr = float(s.quantile(q))
-    exceed = (s > thr)
-
-    # Find contiguous exceedance segments in 1-hour steps
-    segments = []
-    in_seg = False
-    start = None
-    last_t = None
-
-    for t, f in exceed.items():
-        if f and not in_seg:
-            in_seg = True
-            start = t
-            last_t = t
-            continue
-
-        if in_seg:
-            # Allow hourly cadence with minute offsets (e.g., xx:30)
-            dt_hours = (t - last_t) / pd.Timedelta(hours=1)
-            if dt_hours > 1.01:  # break segment on time gap
-                segments.append((start, last_t))
-                in_seg = False
-                start = None
-
-            if f and not in_seg:
-                in_seg = True
-                start = t
-
-            last_t = t
-
-            if (not f) and in_seg:
-                # Keep logic explicit; contiguous extraction is finalized below.
-                pass
-
-    # More robust segment extraction using all exceed=True timestamps
-    t_ex = exceed[exceed].index
-    if len(t_ex) == 0:
-        segments = []
+    thr_primary = float(s_valid.quantile(q_primary))
+    thr_primary_low = float(s_valid.quantile(q_primary_low))
+    if has_secondary:
+        s2_valid = s_secondary.dropna()
+        thr_secondary = float(s2_valid.quantile(q_secondary)) if len(s2_valid) else np.nan
     else:
-        segments = []
+        thr_secondary = np.nan
+
+    exceed_primary = s_primary > thr_primary
+    if has_secondary and np.isfinite(thr_secondary):
+        exceed_support = (s_primary > thr_primary_low) & (s_secondary > thr_secondary)
+    else:
+        exceed_support = pd.Series(False, index=full_index)
+    exceed = exceed_primary | exceed_support
+
+    # Segment extraction using exceed=True timestamps.
+    t_ex = exceed[exceed].index
+    segments = []
+    if len(t_ex) > 0:
         st = t_ex[0]
         prev = t_ex[0]
         for t in t_ex[1:]:
@@ -437,7 +468,7 @@ def detect_events(ts: pd.DataFrame, crit_var: str, q: float,
                 prev = t
         segments.append((st, prev))
 
-    # Filter segments by minimum duration
+    # Filter segments by minimum duration.
     segs = []
     for a, b in segments:
         dur = int(round(((b - a) / pd.Timedelta(hours=1)) + 1))
@@ -445,18 +476,19 @@ def detect_events(ts: pd.DataFrame, crit_var: str, q: float,
             segs.append((a, b))
 
     if not segs:
+        thresholds = {"primary": thr_primary, "primary_low": thr_primary_low, "secondary": thr_secondary}
         events = pd.DataFrame(columns=[
             "event_id", "start_local", "end_local", "start_utc", "end_utc",
             "duration_hours", "mean_crit_span", "mean_crit_exceed", "max_crit",
-            "threshold", "exceed_fraction"
+            "threshold", "exceed_fraction",
+            "primary_var", "secondary_var",
+            "threshold_primary", "threshold_primary_low", "threshold_secondary",
+            "mean_secondary_span", "mean_secondary_exceed", "max_secondary",
+            "exceed_primary_fraction", "exceed_support_fraction", "exceed_composite_fraction",
         ])
-        # No events: every hour gets event_id = 0
-        empty_index = pd.DatetimeIndex(pd.to_datetime(ts["datetime_local"]).to_numpy())
-        event_id_full = pd.Series(0, index=empty_index)
-        flag_full = pd.Series(0, index=empty_index)
-        return events, thr, event_id_full, flag_full
+        return events, thresholds, pd.Series(0, index=full_index), pd.Series(0, index=full_index)
 
-    # Merge close segments; gap = next_start - current_end - 1 hour
+    # Merge close segments; gap = next_start - current_end - 1 hour.
     merged = [segs[0]]
     for a, b in segs[1:]:
         la, lb = merged[-1]
@@ -466,29 +498,41 @@ def detect_events(ts: pd.DataFrame, crit_var: str, q: float,
         else:
             merged.append((a, b))
 
-    # Assign event_id for each hourly timestamp (inclusive span)
-    full_index = pd.DatetimeIndex(pd.to_datetime(ts["datetime_local"]).to_numpy())
     event_id_full = pd.Series(0, index=full_index)
     flag_full = pd.Series(0, index=full_index)
 
-    # Map local datetime to UTC using the original dataframe
     map_local_to_utc = pd.Series(pd.to_datetime(ts["datetime_utc"]).to_numpy(), index=full_index)
-
     rows = []
     for eid, (a, b) in enumerate(merged, 1):
         span_mask = (full_index >= a) & (full_index <= b)
         if not span_mask.any():
             continue
-        span_vals = pd.Series(ts.loc[span_mask, crit_var].to_numpy(), index=full_index[span_mask])
 
-        exceed_mask = span_vals > thr
-        exceed_vals = span_vals[exceed_mask]
+        span_primary = pd.Series(ts.loc[span_mask, primary_var].to_numpy(), index=full_index[span_mask])
+        span_secondary = (
+            pd.Series(ts.loc[span_mask, secondary_var].to_numpy(), index=full_index[span_mask])
+            if has_secondary else pd.Series(np.nan, index=full_index[span_mask])
+        )
+
+        span_exceed_primary = exceed_primary.reindex(full_index[span_mask]).fillna(False)
+        span_exceed_support = exceed_support.reindex(full_index[span_mask]).fillna(False)
+        span_exceed_composite = exceed.reindex(full_index[span_mask]).fillna(False)
+
+        primary_exceed_vals = span_primary[span_exceed_primary]
+        secondary_exceed_vals = span_secondary[span_exceed_support]
 
         duration_hours = int(span_mask.sum())
-        mean_span = float(span_vals.mean()) if len(span_vals) else np.nan
-        mean_exceed = float(exceed_vals.mean()) if len(exceed_vals) else np.nan
-        max_val = float(span_vals.max()) if len(span_vals) else np.nan
-        exceed_frac = float(exceed_mask.mean()) if len(span_vals) else 0.0
+        mean_primary_span = float(span_primary.mean()) if len(span_primary) else np.nan
+        mean_primary_exceed = float(primary_exceed_vals.mean()) if len(primary_exceed_vals) else np.nan
+        max_primary = float(span_primary.max()) if len(span_primary) else np.nan
+
+        mean_secondary_span = float(span_secondary.mean()) if len(span_secondary) else np.nan
+        mean_secondary_exceed = float(secondary_exceed_vals.mean()) if len(secondary_exceed_vals) else np.nan
+        max_secondary = float(span_secondary.max()) if len(span_secondary) else np.nan
+
+        frac_primary = float(span_exceed_primary.mean()) if len(span_primary) else 0.0
+        frac_support = float(span_exceed_support.mean()) if len(span_primary) else 0.0
+        frac_composite = float(span_exceed_composite.mean()) if len(span_primary) else 0.0
 
         event_id_full.iloc[span_mask] = eid
         flag_full.iloc[span_mask] = 1
@@ -503,15 +547,29 @@ def detect_events(ts: pd.DataFrame, crit_var: str, q: float,
             "start_utc": start_utc,
             "end_utc": end_utc,
             "duration_hours": duration_hours,
-            "mean_crit_span": mean_span,         # mean over event span
-            "mean_crit_exceed": mean_exceed,     # mean over hours above threshold
-            "max_crit": max_val,
-            "threshold": thr,
-            "exceed_fraction": exceed_frac
+            # Backward-compatible primary fields.
+            "mean_crit_span": mean_primary_span,
+            "mean_crit_exceed": mean_primary_exceed,
+            "max_crit": max_primary,
+            "threshold": thr_primary,
+            "exceed_fraction": frac_composite,
+            # Explicit multi-criteria fields.
+            "primary_var": primary_var,
+            "secondary_var": secondary_var if has_secondary else "",
+            "threshold_primary": thr_primary,
+            "threshold_primary_low": thr_primary_low,
+            "threshold_secondary": thr_secondary,
+            "mean_secondary_span": mean_secondary_span,
+            "mean_secondary_exceed": mean_secondary_exceed,
+            "max_secondary": max_secondary,
+            "exceed_primary_fraction": frac_primary,
+            "exceed_support_fraction": frac_support,
+            "exceed_composite_fraction": frac_composite,
         })
 
     events = pd.DataFrame(rows)
-    return events, thr, event_id_full, flag_full
+    thresholds = {"primary": thr_primary, "primary_low": thr_primary_low, "secondary": thr_secondary}
+    return events, thresholds, event_id_full, flag_full
 
 
 def sniff_delimiter(path: Path) -> str:
@@ -578,14 +636,46 @@ def build_daily_mean_table(ts: pd.DataFrame, target_year: int) -> pd.DataFrame:
     return daily
 
 
-def build_dust_daily_table(ts: pd.DataFrame, crit_var: str, threshold: float, target_year: int | None = None) -> pd.DataFrame:
-    """Build daily dust stats from hourly CRIT_VAR."""
-    daily = (
-        ts.assign(date=pd.to_datetime(ts["datetime_local"]).dt.date)
-        .groupby("date", as_index=False)[crit_var]
-        .agg(dust_mean="mean", dust_max="max")
-    )
-    daily["dust_flag"] = (daily["dust_max"] >= threshold).astype(int)
+def build_dust_daily_table(
+    ts: pd.DataFrame,
+    primary_var: str,
+    thresholds: Dict[str, float],
+    secondary_var: str | None = None,
+    target_year: int | None = None,
+) -> pd.DataFrame:
+    """Build daily dust stats from hourly criteria variables.
+
+    `dust_*` columns remain backward-compatible and map to primary criterion.
+    """
+    work = ts.assign(date=pd.to_datetime(ts["datetime_local"]).dt.date)
+    daily_primary = work.groupby("date", as_index=False)[primary_var].agg(primary_mean="mean", primary_max="max")
+    daily = daily_primary.rename(columns={"primary_mean": "dust_mean", "primary_max": "dust_max"})
+    daily[f"{primary_var.lower()}_mean"] = daily["dust_mean"]
+    daily[f"{primary_var.lower()}_max"] = daily["dust_max"]
+
+    has_secondary = secondary_var is not None and secondary_var in ts.columns
+    if has_secondary:
+        daily_secondary = work.groupby("date", as_index=False)[secondary_var].agg(sec_mean="mean", sec_max="max")
+        daily = daily.merge(daily_secondary, on="date", how="left")
+        daily[f"{secondary_var.lower()}_mean"] = daily["sec_mean"]
+        daily[f"{secondary_var.lower()}_max"] = daily["sec_max"]
+        daily = daily.drop(columns=["sec_mean", "sec_max"])
+
+    thr_primary = thresholds.get("primary", np.nan)
+    thr_primary_low = thresholds.get("primary_low", np.nan)
+    thr_secondary = thresholds.get("secondary", np.nan)
+
+    if has_secondary and np.isfinite(thr_secondary):
+        daily["dust_flag"] = (
+            (daily["dust_max"] >= thr_primary)
+            | ((daily["dust_max"] >= thr_primary_low) & (daily[f"{secondary_var.lower()}_max"] >= thr_secondary))
+        ).astype(int)
+    else:
+        daily["dust_flag"] = (daily["dust_max"] >= thr_primary).astype(int)
+
+    daily["threshold_primary"] = thr_primary
+    daily["threshold_primary_low"] = thr_primary_low
+    daily["threshold_secondary"] = thr_secondary
     if target_year is not None:
         daily = daily[daily["date"].map(lambda d: d.year == target_year)].copy()
     return daily
@@ -596,9 +686,10 @@ def to_city_event_table(events: pd.DataFrame) -> pd.DataFrame:
     if events.empty:
         return pd.DataFrame(columns=[
             "start_datetime", "end_datetime", "duration_hours",
-            "mean_critical", "max_critical", "threshold"
+            "mean_critical", "max_critical", "threshold",
+            "mean_secondary", "max_secondary"
         ])
-    return pd.DataFrame({
+    out = pd.DataFrame({
         "start_datetime": events["start_local"],
         "end_datetime": events["end_local"],
         "duration_hours": events["duration_hours"],
@@ -606,6 +697,11 @@ def to_city_event_table(events: pd.DataFrame) -> pd.DataFrame:
         "max_critical": events["max_crit"],
         "threshold": events["threshold"],
     })
+    if "mean_secondary_exceed" in events.columns:
+        out["mean_secondary"] = events["mean_secondary_exceed"]
+    if "max_secondary" in events.columns:
+        out["max_secondary"] = events["max_secondary"]
+    return out
 
 
 def main():
@@ -624,20 +720,43 @@ def main():
 
     # 2) Build hourly ROI time series
     print("\n=== Step 2: Build hourly ROI time series ===")
-    ts = build_hourly_timeseries(nc_files, CRIT_VAR, BOX, EXTRACT_MODE)
+    extract_vars = list(dict.fromkeys(EXTRACT_VARS))
+    ts = build_hourly_timeseries(nc_files, extract_vars, BOX, EXTRACT_MODE)
+    if PRIMARY_CRIT_VAR not in ts.columns:
+        raise RuntimeError(f"Primary criterion variable missing in hourly series: {PRIMARY_CRIT_VAR}")
 
     # 3) Detect events and mark hourly series
     print("\n=== Step 3: Detect events and mark hourly series ===")
-    events, thr, event_id_series, flag_series = detect_events(
-        ts, CRIT_VAR, Q, MIN_EVENT_HOURS, MERGE_GAP_HOURS
+    events, thresholds, event_id_series, flag_series = detect_events(
+        ts=ts,
+        primary_var=PRIMARY_CRIT_VAR,
+        secondary_var=SECONDARY_CRIT_VAR,
+        q_primary=Q_PRIMARY,
+        q_primary_low=Q_PRIMARY_LOW,
+        q_secondary=Q_SECONDARY,
+        min_hours=MIN_EVENT_HOURS,
+        merge_gap_hours=MERGE_GAP_HOURS,
     )
 
     idx_full = pd.to_datetime(ts["datetime_local"])
     ts_marked = ts.copy()
     ts_marked["event_id"] = event_id_series.reindex(idx_full).fillna(0).astype(int).values
     ts_marked["event_flag"] = flag_series.reindex(idx_full).fillna(0).astype(int).values
-    ts_marked["threshold_used"] = thr
-    ts_marked["exceed_threshold"] = (ts_marked[CRIT_VAR] > thr).astype(int)
+    ts_marked["threshold_used"] = thresholds.get("primary", np.nan)  # backward compatibility
+    ts_marked["threshold_primary"] = thresholds.get("primary", np.nan)
+    ts_marked["threshold_primary_low"] = thresholds.get("primary_low", np.nan)
+    ts_marked["threshold_secondary"] = thresholds.get("secondary", np.nan)
+
+    ts_marked["exceed_primary"] = (ts_marked[PRIMARY_CRIT_VAR] > thresholds.get("primary", np.nan)).astype(int)
+    if SECONDARY_CRIT_VAR in ts_marked.columns and np.isfinite(thresholds.get("secondary", np.nan)):
+        ts_marked["exceed_support"] = (
+            (ts_marked[PRIMARY_CRIT_VAR] > thresholds.get("primary_low", np.nan))
+            & (ts_marked[SECONDARY_CRIT_VAR] > thresholds.get("secondary", np.nan))
+        ).astype(int)
+    else:
+        ts_marked["exceed_support"] = 0
+    # Composite exceedance (kept in legacy column name too).
+    ts_marked["exceed_threshold"] = ((ts_marked["exceed_primary"] == 1) | (ts_marked["exceed_support"] == 1)).astype(int)
 
     # 4) Output complete CSV set (keep all commonly-used files)
     print("\n=== Step 4: Write complete CSV outputs ===")
@@ -653,7 +772,13 @@ def main():
     ts_marked.to_csv(city_hourly_csv, index=False, encoding="utf-8-sig")
     to_city_event_table(events).to_csv(city_events_csv, index=False, encoding="utf-8-sig")
 
-    dust_daily = build_dust_daily_table(ts_marked, CRIT_VAR, thr, TARGET_YEAR)
+    dust_daily = build_dust_daily_table(
+        ts_marked,
+        primary_var=PRIMARY_CRIT_VAR,
+        thresholds=thresholds,
+        secondary_var=SECONDARY_CRIT_VAR,
+        target_year=TARGET_YEAR,
+    )
     dust_daily.to_csv(city_daily_csv, index=False, encoding="utf-8-sig")
 
     # 5) Build 2021 aligned AQ + daily-mean MERRA output

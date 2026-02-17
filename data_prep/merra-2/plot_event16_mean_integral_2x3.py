@@ -1,0 +1,339 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import cartopy.crs as ccrs
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+
+# -----------------------------
+# Config
+# -----------------------------
+EVENT_ID = 16
+UTC_FALLBACK_START = "2021-06-05 23:30:00"
+UTC_FALLBACK_END = "2021-06-07 02:30:00"
+LOCAL_TZ_OFFSET_HOURS = 8
+
+SUMMARY_CSV = Path(__file__).resolve().parent / "out_dust_events" / "dust_events_summary.csv"
+NC_DIR_CANDIDATES = [
+    Path(__file__).resolve().parents[2] / "downloads_merra2_subset",
+    Path(__file__).resolve().parent / "downloads_merra2_subset",
+]
+OUT_DIR = Path(__file__).resolve().parent / "out_dust_events" / "event16_spatial_maps"
+
+# Two separate 2x2 layouts:
+# 1) Mass group: DUSMASS + DUCMASS
+# 2) AOT group: DUEXTTAU + DUSCATAU
+PANEL_GROUPS = {
+    "mass": ["DUSMASS", "DUCMASS"],
+    "aot": ["DUEXTTAU", "DUSCATAU"],
+}
+BASE_VARS_REQUIRED = sorted({v for group in PANEL_GROUPS.values() for v in group})
+
+LANZHOU_LON = 103.8343
+LANZHOU_LAT = 36.0611
+LANZHOU_BOX = (103.0, 35.5, 104.5, 36.8)  # (W, S, E, N)
+SHOW_LANZHOU_MARKER = True
+SHOW_LANZHOU_BOX = True
+
+
+def _setup_mapbase_import():
+    mapbase_dir = Path(__file__).resolve().parents[1] / "mapbase"
+    if str(mapbase_dir) not in sys.path:
+        sys.path.insert(0, str(mapbase_dir))
+    import world_adm0_china_region_map as wadm
+
+    wadm.DEFAULT_WORLD_ADM0_SHP = str((mapbase_dir / "geoBoundariesCGAZ_ADM0" / "geoBoundariesCGAZ_ADM0.shp").resolve())
+    wadm.DEFAULT_WORLD_ADM1_SHP = str((mapbase_dir / "geoBoundariesCGAZ_ADM1" / "geoBoundariesCGAZ_ADM1.shp").resolve())
+    wadm.DEFAULT_CHINA_ADM0_SIMPLIFIED_SHP = str(
+        (mapbase_dir / "geoBoundaries-CHN-ADM0-all" / "geoBoundaries-CHN-ADM0_simplified.shp").resolve()
+    )
+    return wadm.draw_world_adm0_china_highlight_canvas
+
+
+def _pick_nc_dir() -> Path:
+    for nc_dir in NC_DIR_CANDIDATES:
+        if nc_dir.exists():
+            return nc_dir
+    raise FileNotFoundError(f"No nc directory found among: {NC_DIR_CANDIDATES}")
+
+
+def _get_event_window_utc(summary_csv: Path, event_id: int) -> tuple[pd.Timestamp, pd.Timestamp]:
+    if summary_csv.exists():
+        df = pd.read_csv(summary_csv)
+        if "event_id" in df.columns and "start_utc" in df.columns and "end_utc" in df.columns:
+            row = df.loc[df["event_id"] == event_id]
+            if len(row) == 1:
+                start_utc = pd.to_datetime(row.iloc[0]["start_utc"])
+                end_utc = pd.to_datetime(row.iloc[0]["end_utc"])
+                if pd.notna(start_utc) and pd.notna(end_utc):
+                    return start_utc, end_utc
+    return pd.to_datetime(UTC_FALLBACK_START), pd.to_datetime(UTC_FALLBACK_END)
+
+
+def _collect_event_files(nc_dir: Path, start_utc: pd.Timestamp, end_utc: pd.Timestamp) -> list[Path]:
+    files = []
+    days = pd.date_range(start=start_utc.floor("D"), end=end_utc.floor("D"), freq="D")
+    for day in days:
+        ymd = day.strftime("%Y%m%d")
+        files.extend(sorted(nc_dir.glob(f"MERRA2_4*.tavg1_2d_aer_Nx.{ymd}.SUB.nc")))
+    return sorted({p.resolve() for p in files})
+
+
+def _load_event_dataset(nc_files: list[Path], start_utc: pd.Timestamp, end_utc: pd.Timestamp) -> xr.Dataset:
+    if not nc_files:
+        raise FileNotFoundError("No .SUB.nc files found for event time window.")
+
+    datasets = []
+    for fp in nc_files:
+        ds = xr.open_dataset(fp, engine="netcdf4")
+        keep = [v for v in BASE_VARS_REQUIRED if v in ds.data_vars]
+        if not keep:
+            ds.close()
+            continue
+        datasets.append(ds[keep])
+
+    if not datasets:
+        raise RuntimeError("No required variables found in selected event files.")
+
+    ds_all = xr.concat(datasets, dim="time").sortby("time")
+    for ds in datasets:
+        ds.close()
+
+    ds_evt = ds_all.sel(time=slice(start_utc, end_utc))
+    if ds_evt.sizes.get("time", 0) == 0:
+        raise RuntimeError("Selected event window has zero timesteps after slicing.")
+    return ds_evt
+
+
+def _infer_extent(ds: xr.Dataset) -> tuple[float, float, float, float]:
+    return (
+        float(ds["lon"].min()),
+        float(ds["lon"].max()),
+        float(ds["lat"].min()),
+        float(ds["lat"].max()),
+    )
+
+
+def _panel_norm(values: np.ndarray, metric: str) -> mcolors.Normalize:
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        return mcolors.Normalize(vmin=0.0, vmax=1.0)
+    lo, hi = np.nanpercentile(finite, [2, 98]) if metric == "mean" else np.nanpercentile(finite, [3, 99])
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        lo = float(np.nanmin(finite))
+        hi = float(np.nanmax(finite))
+        if hi <= lo:
+            hi = lo + 1e-12
+    return mcolors.Normalize(vmin=lo, vmax=hi)
+
+
+def _var_meta(ds: xr.Dataset, var: str) -> tuple[str, str, str]:
+    cmap = {
+        "DUSMASS": "YlOrRd",
+        "DUCMASS": "YlOrRd",
+        "DUEXTTAU": "magma",
+        "DUSCATAU": "magma",
+    }.get(var, "YlOrRd")
+    long_name = ds[var].attrs.get("long_name", var) if var in ds else var
+    unit = ds[var].attrs.get("units", "") if var in ds else ""
+    return long_name, unit, cmap
+
+
+def _draw_background(ax, extent, draw_world_adm0_china_highlight_canvas):
+    draw_world_adm0_china_highlight_canvas(
+        ax=ax,
+        extent=extent,
+        draw_grid=True,
+        show_country_labels=False,
+        processing_extent=extent,
+        neighbor_linewidth=0.36,
+        china_linewidth=1.1,
+        china_edgecolor="#5a5a5a",
+        china_alpha=0.72,
+        omit_shared_with_china=True,
+    )
+
+
+def _overlay_lanzhou(ax):
+    if SHOW_LANZHOU_MARKER:
+        ax.scatter(
+            [LANZHOU_LON],
+            [LANZHOU_LAT],
+            transform=ccrs.PlateCarree(),
+            s=24,
+            marker="o",
+            facecolor="none",
+            edgecolor="black",
+            linewidth=1.0,
+            zorder=6,
+        )
+    if SHOW_LANZHOU_BOX:
+        w, s, e, n = LANZHOU_BOX
+        rect = mpatches.Rectangle(
+            (w, s),
+            e - w,
+            n - s,
+            linewidth=1.2,
+            edgecolor="#1f77b4",
+            facecolor="none",
+            linestyle="-",
+            transform=ccrs.PlateCarree(),
+            zorder=6,
+        )
+        ax.add_patch(rect)
+
+
+def _infer_dt_hours(ds_evt: xr.Dataset) -> float:
+    times = pd.to_datetime(ds_evt["time"].values)
+    if len(times) < 2:
+        return 1.0
+    diffs = np.diff(times.values.astype("datetime64[ns]")).astype("timedelta64[s]").astype(np.int64) / 3600.0
+    diffs = diffs[np.isfinite(diffs) & (diffs > 0)]
+    if diffs.size == 0:
+        return 1.0
+    return float(np.median(diffs))
+
+
+def _integral_unit(unit: str) -> str:
+    if unit:
+        return f"{unit} h"
+    return "h"
+
+
+def _plot_mean_integral_2x2(
+    ds_evt: xr.Dataset,
+    panel_vars: list[str],
+    panel_name: str,
+    extent: tuple[float, float, float, float],
+    out_png: Path,
+    event_id: int,
+    start_utc: pd.Timestamp,
+    end_utc: pd.Timestamp,
+):
+    draw_world_adm0_china_highlight_canvas = _setup_mapbase_import()
+    valid_vars = [v for v in panel_vars if v in ds_evt.data_vars]
+    if len(valid_vars) != 2:
+        raise RuntimeError(f"Need exactly 2 panel vars for 2x2 plot ({panel_name}). Available: {valid_vars}")
+
+    dt_hours = _infer_dt_hours(ds_evt)
+    lon = ds_evt["lon"].values
+    lat = ds_evt["lat"].values
+
+    fig, axes = plt.subplots(
+        nrows=2,
+        ncols=2,
+        figsize=(11.6, 9.2),
+        subplot_kw={"projection": ccrs.PlateCarree()},
+        dpi=320,
+        constrained_layout=False,
+    )
+
+    def _add_compact_cbar(fig_obj, ax_obj, mappable):
+        # Shorter colorbar for cleaner review-style panel balance.
+        cax = ax_obj.inset_axes([1.015, 0.09, 0.04, 0.82])  # [x0, y0, w, h] in axes fraction
+        return fig_obj.colorbar(mappable, cax=cax)
+
+    for col, var in enumerate(valid_vars):
+        long_name, unit, cmap = _var_meta(ds_evt, var)
+
+        ax_mean = axes[0, col]
+        _draw_background(ax_mean, extent, draw_world_adm0_china_highlight_canvas)
+        field_mean = ds_evt[var].mean(dim="time", skipna=True)
+        norm_mean = _panel_norm(field_mean.values, metric="mean")
+        mesh_mean = ax_mean.pcolormesh(
+            lon, lat, field_mean.values, transform=ccrs.PlateCarree(), cmap=cmap, shading="auto", norm=norm_mean, zorder=1
+        )
+        _overlay_lanzhou(ax_mean)
+        cb_mean = _add_compact_cbar(fig, ax_mean, mesh_mean)
+        cb_mean.set_label(unit if unit else var)
+        ax_mean.set_title(f"{long_name}\nMEAN over event window", fontsize=10)
+
+        ax_int = axes[1, col]
+        _draw_background(ax_int, extent, draw_world_adm0_china_highlight_canvas)
+        field_int = ds_evt[var].sum(dim="time", skipna=True) * dt_hours
+        norm_int = _panel_norm(field_int.values, metric="integral")
+        mesh_int = ax_int.pcolormesh(
+            lon, lat, field_int.values, transform=ccrs.PlateCarree(), cmap=cmap, shading="auto", norm=norm_int, zorder=1
+        )
+        _overlay_lanzhou(ax_int)
+        cb_int = _add_compact_cbar(fig, ax_int, mesh_int)
+        cb_int.set_label(_integral_unit(unit))
+        ax_int.set_title(f"{long_name}\nTIME-INTEGRATED over event window (sum(value*dt), dt={dt_hours:.2f} h)", fontsize=10)
+
+    start_local = start_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
+    end_local = end_utc + pd.Timedelta(hours=LOCAL_TZ_OFFSET_HOURS)
+    fig.suptitle(
+        (
+            f"MERRA-2 Event {event_id} Spatial Maps ({panel_name.upper()}, 2x2: MEAN + TIME-INTEGRATED)\n"
+            f"UTC: {start_utc} to {end_utc} | Local(UTC+8): {start_local} to {end_local}"
+        ),
+        fontsize=13,
+        y=0.965,
+    )
+    fig.subplots_adjust(left=0.055, right=0.982, bottom=0.06, top=0.90, wspace=0.22, hspace=0.24)
+
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_png, dpi=350, bbox_inches="tight")
+    plt.close(fig)
+
+
+def main():
+    plt.rcParams.update(
+        {
+            "font.sans-serif": ["Times New Roman", "SimHei", "Microsoft YaHei", "Arial Unicode MS"],
+            "axes.unicode_minus": False,
+            "mathtext.default": "regular",
+            "mathtext.fontset": "stix",
+        }
+    )
+
+    start_utc, end_utc = _get_event_window_utc(SUMMARY_CSV, EVENT_ID)
+    nc_dir = _pick_nc_dir()
+    event_files = _collect_event_files(nc_dir, start_utc, end_utc)
+    ds_evt = _load_event_dataset(event_files, start_utc, end_utc)
+    extent = _infer_extent(ds_evt)
+
+    out_mass = OUT_DIR / f"event{EVENT_ID}_spatial_mean_integral_mass_2x2.png"
+    out_aot = OUT_DIR / f"event{EVENT_ID}_spatial_mean_integral_aot_2x2.png"
+    _plot_mean_integral_2x2(
+        ds_evt=ds_evt,
+        panel_vars=PANEL_GROUPS["mass"],
+        panel_name="mass",
+        extent=extent,
+        out_png=out_mass,
+        event_id=EVENT_ID,
+        start_utc=start_utc,
+        end_utc=end_utc,
+    )
+    _plot_mean_integral_2x2(
+        ds_evt=ds_evt,
+        panel_vars=PANEL_GROUPS["aot"],
+        panel_name="aot",
+        extent=extent,
+        out_png=out_aot,
+        event_id=EVENT_ID,
+        start_utc=start_utc,
+        end_utc=end_utc,
+    )
+
+    print("\nDONE")
+    print(f"Event ID         : {EVENT_ID}")
+    print(f"UTC window       : {start_utc} -> {end_utc}")
+    print(f"Local window+8   : {start_utc + pd.Timedelta(hours=8)} -> {end_utc + pd.Timedelta(hours=8)}")
+    print(f"NC directory     : {nc_dir}")
+    print(f"Files used       : {len(event_files)}")
+    for f in event_files:
+        print(f"  - {Path(f).name}")
+    print(f"Output figure    : {out_mass.resolve()}")
+    print(f"Output figure    : {out_aot.resolve()}")
+
+
+if __name__ == "__main__":
+    main()
