@@ -680,7 +680,7 @@ def build_dust_daily_table(
         daily = daily[daily["date"].map(lambda d: d.year == target_year)].copy()
     return daily
 
-
+#%% 
 def to_city_event_table(events: pd.DataFrame) -> pd.DataFrame:
     """Convert internal event summary to city-style event output columns."""
     if events.empty:

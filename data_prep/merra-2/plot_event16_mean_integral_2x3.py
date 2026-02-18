@@ -15,9 +15,9 @@ import xarray as xr
 # -----------------------------
 # Config
 # -----------------------------
-EVENT_ID = 16
-UTC_FALLBACK_START = "2021-06-05 23:30:00"
-UTC_FALLBACK_END = "2021-06-07 02:30:00"
+EVENT_ID = 4
+UTC_FALLBACK_START = "2021-03-16 02:30:00"
+UTC_FALLBACK_END = "2021-03-16 05:30:00"
 LOCAL_TZ_OFFSET_HOURS = 8
 
 SUMMARY_CSV = Path(__file__).resolve().parent / "out_dust_events" / "dust_events_summary.csv"
@@ -25,7 +25,7 @@ NC_DIR_CANDIDATES = [
     Path(__file__).resolve().parents[2] / "downloads_merra2_subset",
     Path(__file__).resolve().parent / "downloads_merra2_subset",
 ]
-OUT_DIR = Path(__file__).resolve().parent / "out_dust_events" / "event16_spatial_maps"
+OUT_DIR = Path(__file__).resolve().parent / "out_dust_events" / "event4_spatial_maps"
 
 # Two separate 2x2 layouts:
 # 1) Mass group: DUSMASS + DUCMASS
