@@ -18,7 +18,7 @@ This repository is designed as a **research framework** rather than a single “
 - [Sand-and-Dust-Storms-and-Human-Health](#sand-and-dust-storms-and-human-health)
   - [Table of contents](#table-of-contents)
 - [Preview](#preview)
-  - [MERRA-2 Event Spatial Heatmaps (Example)](#merra-2-event-spatial-heatmaps-example)
+  - [MERRA-2 and CNEMC Event Visuals (2021-03-16 Focus)](#merra-2-and-cnemc-event-visuals-2021-03-16-focus)
   - [1. Repository goals](#1-repository-goals)
     - [1.1 Problem statement](#11-problem-statement)
     - [1.2 Event-first philosophy](#12-event-first-philosophy)
@@ -74,45 +74,28 @@ Current top-level layout (quick orientation):
 
 ---
 # Preview
-## MERRA-2 Event Spatial Heatmaps (Example)
+## MERRA-2 and CNEMC Event Visuals (2021-03-16 Focus)
 
-Event window used for this example:
-- `event_id = 16`
-- UTC: `2021-06-05 23:30:00` to `2021-06-07 02:30:00`
-- Local (UTC+8): `2021-06-06 07:30:00` to `2021-06-07 10:30:00`
-
-Generated from:
-- `data_prep/merra-2/plot_event16_mean_integral_2x3.py`
-- `data_prep/merra-2/plot_event16_spatial_heatmaps.py`
-
-Outputs:
-- Mass 2x2 mean+integral heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_mass_2x2.png`
-- AOT 2x2 mean+integral heatmaps: `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_aot_2x2.png`
-- Focus 1x2 map (DUFLUX mean + DUSMASS peak-time): `data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png`
-
-How `mean` and `time-integrated` are computed:
-- Statistics are computed per grid cell over the event time window (not spatially averaged over the map).
-- `mean` heatmap at `(lat, lon)`: time-average during the event, i.e. `mean_t V(t, lat, lon)`.
-- `time-integrated` heatmap at `(lat, lon)`: event-window accumulation, i.e. `sum_t V(t, lat, lon) * dt` (with `dt` inferred from time-step spacing).
-- Interpretation: `mean` reflects sustained intensity level; `time-integrated` reflects cumulative exposure burden.
-- Variables shown:
-  - Mass 2x2: `DUSMASS`, `DUCMASS`
-  - AOT 2x2: `DUEXTTAU`, `DUSCATAU`
+This preview combines China station observations and MERRA-2 event-4 spatial diagnostics around `2021-03-16`, plus a long-range site-level metric panel.
 
 <table>
   <tr>
-    <td align="center"><strong>Event 16 spatial mass mean + time-integrated heatmaps (2x2)</strong></td>
-    <td align="center"><strong>Event 16 spatial AOT mean + time-integrated heatmaps (2x2)</strong></td>
+    <td align="center"><strong>China PM10/PM2.5 Site Snapshot (2021-03-16 04:00)</strong></td>
+    <td align="center"><strong>MERRA-2 Event 4: Spatial AOT Mean + Time-Integrated (2x2)</strong></td>
   </tr>
   <tr>
-    <td><img src="data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_mass_2x2.png" alt="Event 16 spatial mass mean + time-integrated heatmaps" width="100%"></td>
-    <td><img src="data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_integral_aot_2x2.png" alt="Event 16 spatial AOT mean + time-integrated heatmaps" width="100%"></td>
+    <td><img src="data_prep/cnemc_site_data/china_sites_pm10_pm25_20210316_0400.png" alt="China PM10 PM2.5 site snapshot at 2021-03-16 04:00" width="100%"></td>
+    <td><img src="data_prep/merra-2/out_dust_events/event4_spatial_maps/event4_spatial_mean_integral_aot_2x2.png" alt="MERRA-2 event4 spatial AOT mean and time-integrated heatmaps" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>MERRA-2 Event 4: Spatial Mass Mean + Time-Integrated (2x2)</strong></td>
+    <td align="center"><strong>Site 1477A Metrics (2015-01-01 to 2025-12-31)</strong></td>
+  </tr>
+  <tr>
+    <td><img src="data_prep/merra-2/out_dust_events/event4_spatial_maps/event4_spatial_mean_integral_mass_2x2.png" alt="MERRA-2 event4 spatial mass mean and time-integrated heatmaps" width="100%"></td>
+    <td><img src="data_prep/cnemc_site_data/1477A_metrics_20150101_20251231.png" alt="Site 1477A metrics from 2015-01-01 to 2025-12-31" width="100%"></td>
   </tr>
 </table>
-
-**Event 16 spatial focus map (1x2: DUFLUX_MAG mean + DUSMASS peak-time)**
-
-![Event 16 spatial focus map (1x2)](data_prep/merra-2/out_dust_events/event16_spatial_maps/event16_spatial_mean_heatmaps.png)
 
 ---
 
