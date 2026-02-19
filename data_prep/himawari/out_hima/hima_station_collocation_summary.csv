@@ -1,0 +1,2 @@
+﻿obs_utc,obs_local,station_matched_local_time,n_sites_total,n_sites_valid_pm10,n_sites_in_extent,n_sites_collocated,n_sites_clear,n_sites_dust_candidate,spearman_pm10_vs_btd15_13,spearman_pm10_vs_dli,pm10_p90_threshold,high_pm10_p90_hit_rate,station_var,station_nc_path,station_time_exact_match
+2021-03-16 04:00:00,2021-03-16 12:00:00,2021-03-16 12:00:00,2030,1738,1738,1738,1096,130,0.40943101262240184,0.5111568377037143,868.8999999999999,0.09770114942528736,PM10,C:\DOCUMENTO\nc_out\documento_all_sites_20210101_20211231.nc,True

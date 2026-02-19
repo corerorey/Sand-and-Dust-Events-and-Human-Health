@@ -1,0 +1,2 @@
+﻿obs_utc,event_id,in_event_window,event_start_utc,event_end_utc,valid_pixel_count,dust_candidate_pixel_count,dust_candidate_fraction,score_threshold_q85,score_p50,score_p90,score_p99
+2021-03-16 04:00:00,4,True,2021-03-15 16:30:00,2021-03-16 10:30:00,82397,12360,0.1500054613638846,0.43185593485832213,0.3159424960613251,0.449047988653183,0.5455504918098449
