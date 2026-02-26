@@ -18,32 +18,39 @@ This repository is designed as a **research framework** rather than a single “
 - [Sand-and-Dust-Storms-and-Human-Health](#sand-and-dust-storms-and-human-health)
   - [Table of contents](#table-of-contents)
 - [Preview](#preview)
-  - [MERRA-2 and CNEMC Event Visuals (2021-03-16 Focus)](#merra-2-and-cnemc-event-visuals-2021-03-16-focus)
-  - [1. Repository goals](#1-repository-goals)
-    - [1.1 Problem statement](#11-problem-statement)
-    - [1.2 Event-first philosophy](#12-event-first-philosophy)
-  - [2. Data architecture](#2-data-architecture)
-    - [2.1 Core datasets and typical formats](#21-core-datasets-and-typical-formats)
-    - [2.2 Temporal alignment](#22-temporal-alignment)
-    - [2.3 Spatial alignment](#23-spatial-alignment)
-  - [3. Exposure engineering for SDS](#3-exposure-engineering-for-sds)
-    - [3.1 Event object (recommended data model)](#31-event-object-recommended-data-model)
-    - [3.2 Dust vs. non-dust PM separation](#32-dust-vs-non-dust-pm-separation)
-  - [4. Health-risk modeling](#4-health-risk-modeling)
-    - [4.1 Generalized Additive Models (GAM)](#41-generalized-additive-models-gam)
-    - [4.2 Distributed Lag Nonlinear Models (DLNM)](#42-distributed-lag-nonlinear-models-dlnm)
-    - [4.3 Multi-site analysis](#43-multi-site-analysis)
-  - [5. Causal inference modules](#5-causal-inference-modules)
-  - [6. Machine learning modules](#6-machine-learning-modules)
-    - [6.1 Exposure modeling (high-resolution dust surfaces)](#61-exposure-modeling-high-resolution-dust-surfaces)
-    - [6.2 Risk prediction and classification (TabPFN as a fast baseline)](#62-risk-prediction-and-classification-tabpfn-as-a-fast-baseline)
-  - [7. Decision support: rehearsal learning](#7-decision-support-rehearsal-learning)
-    - [7.1 Grad-RH (gradient-based nonlinear rehearsal learning)](#71-grad-rh-gradient-based-nonlinear-rehearsal-learning)
-    - [7.2 AUF-MICNS (avoiding undesired future with minimal cost under non-stationarity)](#72-auf-micns-avoiding-undesired-future-with-minimal-cost-under-non-stationarity)
-  - [8. Recommended minimal variable set](#8-recommended-minimal-variable-set)
-  - [9. Evaluation, diagnostics, and reproducibility](#9-evaluation-diagnostics-and-reproducibility)
-  - [10. Data resources (links + formats)](#10-data-resources-links--formats)
-  - [11. References \& Review](#11-references--review)
+  - [MERRA-2, CNEMC, and Himawari Event Visuals (2021-03-16 Focus)](#merra-2-cnemc-and-himawari-event-visuals-2021-03-16-focus)
+    - [Dataset Collection and Preprocessing Progress (Snapshot: 2026-02-26)](#dataset-collection-and-preprocessing-progress-snapshot-2026-02-26)
+    - [Key Demonstration Figures (8-Panel Closed Loop)](#key-demonstration-figures-8-panel-closed-loop)
+    - [Figure Notes (What Each Figure Demonstrates)](#figure-notes-what-each-figure-demonstrates)
+    - [Extension Status Beyond Event 4 (Event 16 Mention Only)](#extension-status-beyond-event-4-event-16-mention-only)
+
+<!-- End Preview TOC block -->
+
+- [1. Repository goals](#1-repository-goals)
+  - [1.1 Problem statement](#11-problem-statement)
+  - [1.2 Event-first philosophy](#12-event-first-philosophy)
+- [2. Data architecture](#2-data-architecture)
+  - [2.1 Core datasets and typical formats](#21-core-datasets-and-typical-formats)
+  - [2.2 Temporal alignment](#22-temporal-alignment)
+  - [2.3 Spatial alignment](#23-spatial-alignment)
+- [3. Exposure engineering for SDS](#3-exposure-engineering-for-sds)
+  - [3.1 Event object (recommended data model)](#31-event-object-recommended-data-model)
+  - [3.2 Dust vs. non-dust PM separation](#32-dust-vs-non-dust-pm-separation)
+- [4. Health-risk modeling](#4-health-risk-modeling)
+  - [4.1 Generalized Additive Models (GAM)](#41-generalized-additive-models-gam)
+  - [4.2 Distributed Lag Nonlinear Models (DLNM)](#42-distributed-lag-nonlinear-models-dlnm)
+  - [4.3 Multi-site analysis](#43-multi-site-analysis)
+- [5. Causal inference modules](#5-causal-inference-modules)
+- [6. Machine learning modules](#6-machine-learning-modules)
+  - [6.1 Exposure modeling (high-resolution dust surfaces)](#61-exposure-modeling-high-resolution-dust-surfaces)
+  - [6.2 Risk prediction and classification (TabPFN as a fast baseline)](#62-risk-prediction-and-classification-tabpfn-as-a-fast-baseline)
+- [7. Decision support: rehearsal learning](#7-decision-support-rehearsal-learning)
+  - [7.1 Grad-RH (gradient-based nonlinear rehearsal learning)](#71-grad-rh-gradient-based-nonlinear-rehearsal-learning)
+  - [7.2 AUF-MICNS (avoiding undesired future with minimal cost under non-stationarity)](#72-auf-micns-avoiding-undesired-future-with-minimal-cost-under-non-stationarity)
+- [8. Recommended minimal variable set](#8-recommended-minimal-variable-set)
+- [9. Evaluation, diagnostics, and reproducibility](#9-evaluation-diagnostics-and-reproducibility)
+- [10. Data resources (links + formats)](#10-data-resources-links--formats)
+- [11. References \& Review](#11-references--review)
 
 ---
 
@@ -73,29 +80,68 @@ Current top-level layout (quick orientation):
 
 
 ---
-# Preview
-## MERRA-2 and CNEMC Event Visuals (2021-03-16 Focus)
+## Preview
+### MERRA-2, CNEMC, and Himawari Event Visuals (2021-03-16 Focus)
 
-This preview combines China station observations and MERRA-2 event-4 spatial diagnostics around `2021-03-16`, plus a long-range site-level metric panel.
+#### Dataset Collection and Preprocessing Progress (Snapshot: 2026-02-26)
+
+- MERRA-2 ROI hourly extraction produced `8760` rows (`2021-01-01 08:30` to `2022-01-01 07:30`, local UTC+8), with `25` detected dust events and `559` event hours.
+- Event 4 cross-source focus window is `2021-03-16 00:30` to `2021-03-16 18:30` local (`19 h`).
+- AQ-MERRA daily alignment generated `365` rows for `2021-01-01` to `2021-12-31`.
+- CNEMC NetCDF consolidation currently includes `2030` sites and `15` pollutant variables, built from `4285` scanned daily files, with coverage extended to `2026-02-14`.
+- Himawari collocation snapshot at `2021-03-16 04:00 UTC` includes `1738` collocated valid PM10 sites, with Spearman `PM10 vs BTD15-13 = 0.409` and `PM10 vs DLI = 0.511`.
+
+#### Key Demonstration Figures (8-Panel Closed Loop)
 
 <table>
   <tr>
-    <td align="center"><strong>China PM10/PM2.5 Site Snapshot (2021-03-16 04:00)</strong></td>
-    <td align="center"><strong>MERRA-2 Event 4: Spatial AOT Mean + Time-Integrated (2x2)</strong></td>
+    <td align="center"><strong>CNEMC National PM10/PM2.5 Snapshot (2021-03-16 04:00)</strong></td>
+    <td align="center"><strong>MERRA-2 Event 4 AOT Diagnostics (Mean + Time-Integrated, 2x2)</strong></td>
   </tr>
   <tr>
-    <td><img src="data_prep/cnemc_site_data/china_sites_pm10_pm25_20210316_0400.png" alt="China PM10 PM2.5 site snapshot at 2021-03-16 04:00" width="100%"></td>
-    <td><img src="data_prep/merra-2/out_dust_events/event4_spatial_maps/event4_spatial_mean_integral_aot_2x2.png" alt="MERRA-2 event4 spatial AOT mean and time-integrated heatmaps" width="100%"></td>
+    <td><img src="data_prep/cnemc_site_data/china_sites_pm10_pm25_20210316_0400.png" alt="CNEMC PM10 PM2.5 station snapshot at 2021-03-16 04:00" width="100%"></td>
+    <td><img src="data_prep/merra-2/out_dust_events/event4_spatial_maps/event4_spatial_mean_integral_aot_2x2.png" alt="MERRA-2 event4 AOT mean and time-integrated diagnostics" width="100%"></td>
   </tr>
   <tr>
-    <td align="center"><strong>MERRA-2 Event 4: Spatial Mass Mean + Time-Integrated (2x2)</strong></td>
-    <td align="center"><strong>Site 1477A Metrics (2015-01-01 to 2025-12-31)</strong></td>
+    <td align="center"><strong>MERRA-2 Event 4 Mass Diagnostics (Mean + Time-Integrated, 2x2)</strong></td>
+    <td align="center"><strong>CNEMC Site 1477A Long-Range Metrics (2015-01-01 to 2025-12-31)</strong></td>
   </tr>
   <tr>
-    <td><img src="data_prep/merra-2/out_dust_events/event4_spatial_maps/event4_spatial_mean_integral_mass_2x2.png" alt="MERRA-2 event4 spatial mass mean and time-integrated heatmaps" width="100%"></td>
-    <td><img src="data_prep/cnemc_site_data/1477A_metrics_20150101_20251231.png" alt="Site 1477A metrics from 2015-01-01 to 2025-12-31" width="100%"></td>
+    <td><img src="data_prep/merra-2/out_dust_events/event4_spatial_maps/event4_spatial_mean_integral_mass_2x2.png" alt="MERRA-2 event4 mass mean and time-integrated diagnostics" width="100%"></td>
+    <td><img src="data_prep/cnemc_site_data/1477A_metrics_20150101_20251231.png" alt="CNEMC site 1477A long-range metrics" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Himawari Dust RGB (Fixed Ranges)</strong></td>
+    <td align="center"><strong>Himawari Conservative Cloud Mask</strong></td>
+  </tr>
+  <tr>
+    <td><img src="data_prep/himawari/out_hima/hima_dust_rgb_paper_fixed_map.png" alt="Himawari dust RGB fixed ranges" width="100%"></td>
+    <td><img src="data_prep/himawari/out_hima/hima_cloud_mask_conservative_map.png" alt="Himawari conservative cloud mask" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Himawari Dust Candidate Mask</strong></td>
+    <td align="center"><strong>Himawari Dust RGB + Station PM10 Overlay</strong></td>
+  </tr>
+  <tr>
+    <td><img src="data_prep/himawari/out_hima/hima_dust_candidate_mask_map.png" alt="Himawari dust candidate mask" width="100%"></td>
+    <td><img src="data_prep/himawari/out_hima/hima_station_pm10_overlay_snapshot.png" alt="Himawari dust RGB with station PM10 overlay" width="100%"></td>
   </tr>
 </table>
+
+#### Figure Notes (What Each Figure Demonstrates)
+
+1. **CNEMC national PM10/PM2.5 snapshot:** source is CNEMC station NetCDF at one hour; preprocessing stage is hourly slice + valid-station filtering + mapped projection; this shows station-level spatial concentration patterns but cannot infer vertical dust structure or transport pathways by itself.
+2. **MERRA-2 Event 4 AOT diagnostics (2x2):** source is MERRA-2 aerosol subset; preprocessing stage is event-window extraction plus mean/time-integrated aggregation for `DUEXTTAU` and `DUSCATAU`; this shows modeled optical dust burden distribution but cannot directly represent ground PM concentrations.
+3. **MERRA-2 Event 4 mass diagnostics (2x2):** source is MERRA-2 aerosol subset; preprocessing stage is event-window extraction plus mean/time-integrated aggregation for `DUSMASS` and `DUCMASS`; this shows modeled mass-loading intensity and footprint but not causal health effects.
+4. **CNEMC Site 1477A long-range metrics:** source is reconstructed site-level hourly table from CNEMC archives; preprocessing stage is annual invalidation plus short-gap interpolation and multi-metric paneling; this shows long-term temporal variability but cannot isolate dust-only contributions without additional separation.
+5. **Himawari Dust RGB (fixed ranges):** source is Himawari-8 AHI `B11/B13/B15`; preprocessing stage is `DN -> Radiance -> BT -> fixed-range Dust RGB`; interpretation is **qualitative** for plume morphology and candidate region screening, and it cannot be treated as a PM10 concentration map.
+6. **Himawari conservative cloud mask:** source is Himawari BT/BTD products; preprocessing stage is rule-based conservative cloud screening before dust diagnostics; interpretation is **qualitative QC** for where dust inference is safer, and it cannot quantify dust intensity.
+7. **Himawari dust candidate mask:** source is Himawari clear-sky pixels after cloud screening; preprocessing stage is threshold-based binary candidate labeling; interpretation is **semi-quantitative screening** of likely dust footprint, but not a calibrated mass retrieval.
+8. **Himawari Dust RGB + station PM10 overlay:** source is Himawari RGB field plus same-hour CNEMC PM10 station values; preprocessing stage is nearest-pixel collocation and overlay rendering; interpretation is a **semi-quantitative spatial consistency check**, not a causal attribution or inversion model.
+
+#### Extension Status Beyond Event 4 (Event 16 Mention Only)
+
+Beyond Event 4, Event 16 (`2021-05-30 21:30` to `2021-06-01 10:30` local, `38 h`) has already produced MERRA-2 spatial diagnostics in the repository, and is currently used as an extension-check case to verify that the same preprocessing and event-window mapping logic remains stable beyond the March 16 focus event.
 
 ---
 
