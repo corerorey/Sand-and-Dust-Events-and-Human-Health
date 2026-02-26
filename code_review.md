@@ -1,7 +1,7 @@
 # Code Review: Sand-and-Dust-Storms-and-Human-Health
 
-**Reviewed:** 20+ Python source files, 1 Jupyter notebook reference, full README  
-**Date:** 2026-02-26  
+**Reviewed:** 20+ Python source files, full README  
+**Date:** 2026-02-26
 
 ---
 
@@ -24,36 +24,46 @@ This is a **well-structured research project** with a clear scientific focus: li
 
 ### 1. Hardcoded Credentials in Source Code
 
-> [!CAUTION]
-> **Earthdata credentials are hardcoded in plain text** across **4 files** and committed to the Git repository.
+> **CAUTION:** Earthdata credentials are hardcoded in plain text across **4 files** and committed to the Git repository.
 
-| File | Line |
-|------|------|
-| [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py#L38-L39) | `EARTHDATA_USERNAME = "correr27890"` / `EARTHDATA_PASSWORD = "AQN/RZ2Y&S5Rb+j"` |
-| [fetch_data.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch_data.py#L18-L19) | Same credentials |
-| [fetchch.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetchch.py#L18-L19) | Same credentials |
-| [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py#L17-L18) | Same credentials |
+| File | Location |
+|------|----------|
+| [data_prep/merra-2/fetch2.py](data_prep/merra-2/fetch2.py#L38-L39) | `EARTHDATA_USERNAME` / `EARTHDATA_PASSWORD` (lines 38–39) |
+| [data_prep/merra-2/fetch_data.py](data_prep/merra-2/fetch_data.py#L18-L19) | Same credentials |
+| [data_prep/merra-2/fetchch.py](data_prep/merra-2/fetchch.py#L18-L19) | Same credentials |
+| [data_prep/merra-2/openfet.py](data_prep/merra-2/openfet.py#L17-L18) | Same credentials |
 
 **Recommendation:**
 - **Immediately rotate the password** on your Earthdata account
 - Use environment variables (`os.environ["EARTHDATA_USERNAME"]`) or a `.env` file (with `.gitignore`)
-- Add a [_netrc](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py#56-72) / `.netrc` approach as [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py) already demonstrates, but don't hardcode it
-- Add `*.env` and [_netrc](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py#56-72) to `.gitignore`
+- The `ensure_netrc()` approach in [openfet.py](data_prep/merra-2/openfet.py) already points in the right direction — don't hardcode credentials there either
+- Add `*.env` and `_netrc` to `.gitignore`
 
 ### 2. No `.gitignore` File
 
-There is no `.gitignore` preventing sensitive files, output artifacts, or IDE metadata from being committed. This compounds the credential leak above.
+There is no `.gitignore` preventing sensitive files, output artifacts, or IDE metadata from being committed. This directly compounds the credential leak above.
 
 **Recommended `.gitignore` contents:**
-```
-*.env
+
+```gitignore
+# Credentials & secrets
+.env
 _netrc
 .netrc
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+
+# IDE
 .idea/
 .vscode/
+
+# Partial downloads
 *.part
+
+# Generated data outputs
 _tmp_*/
 out_*/
 nc_out/
@@ -66,40 +76,40 @@ downloads_*/
 
 ### 3. Massive Code Duplication Across MERRA-2 Scripts
 
-Four scripts ([fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [fetch_data.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch_data.py), [fetchch.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetchch.py), [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py)) contain **heavily duplicated logic**:
+Four scripts ([fetch2.py](data_prep/merra-2/fetch2.py), [fetch_data.py](data_prep/merra-2/fetch_data.py), [fetchch.py](data_prep/merra-2/fetchch.py), [openfet.py](data_prep/merra-2/openfet.py)) contain **heavily duplicated logic**:
 
 | Duplicated Component | Files |
 |---------------------|-------|
-| URL redirect auth handler | [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [fetchch.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetchch.py), [fetch_data.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch_data.py) |
-| [filename_from_url()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py#118-135) | [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [fetchch.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetchch.py) |
-| [read_lanzhou_aq()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py#256-274) + [_parse_lanzhou_date()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py#241-254) | [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py) |
-| [build_daily_mean_table()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py#621-637) | [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py) |
-| [sniff_delimiter()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py#575-583) | [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py) |
-| [normalize_lon_for_ds()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch_data.py#371-379) | [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [fetch_data.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch_data.py), [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py) |
-| Event detection logic | [fetch2.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch2.py), [fetch_data.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/fetch_data.py), [openfet.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/openfet.py) (3 different implementations!) |
+| URL redirect + auth handler | `fetch2.py`, `fetchch.py`, `fetch_data.py` |
+| `filename_from_url()` | `fetch2.py`, `fetchch.py` |
+| `read_lanzhou_aq()` + `_parse_lanzhou_date()` | `fetch2.py`, `openfet.py` |
+| `build_daily_mean_table()` | `fetch2.py`, `openfet.py` |
+| `sniff_delimiter()` | `fetch2.py`, `openfet.py` |
+| `normalize_lon_for_ds()` | `fetch2.py`, `fetch_data.py`, `openfet.py` |
+| Event detection logic | All three — with **3 different implementations** |
 
-**Impact:** Bug fixes need to be applied in 3-4 places; divergent behavior between scripts is easy to miss.
+**Impact:** Bug fixes must be applied in 3–4 places; divergent behavior between scripts is easy to miss.
 
-**Recommendation:** Extract shared utilities into a `merra2_utils.py` module:
+**Recommendation:** Extract shared utilities into a `data_prep/merra-2/merra2_utils/` package:
 - `auth.py` — credential loading, redirect handler, download functions
 - `event_detection.py` — unified event detection with configurable thresholds
 - `io_utils.py` — CSV sniffing, date parsing, Lanzhou AQ reading
 
-### 4. Functions Duplicated Between [prepro.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/cnemc_site_data/prepro.py) and [build_documento_nc.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/cnemc_site_data/build_documento_nc.py)
+### 4. Functions Duplicated Between CNEMC Scripts
 
-Both share nearly identical versions of: [parse_mixed_date()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/cnemc_site_data/build_documento_nc.py#65-73), [discover_data_dirs()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/cnemc_site_data/prepro.py#82-96), [path_has_data_segment()](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/cnemc_site_data/prepro.py#98-101), and the same regex patterns (`DATA_DIR_RE`, `DAILY_FILE_RE`).
+[prepro.py](data_prep/cnemc_site_data/prepro.py) and [build_documento_nc.py](data_prep/cnemc_site_data/build_documento_nc.py) share nearly identical versions of `parse_mixed_date()`, `discover_data_dirs()`, `path_has_data_segment()`, and the same regex patterns (`DATA_DIR_RE`, `DAILY_FILE_RE`).
 
-**Recommendation:** Extract shared CNEMC utilities into a `cnemc_common.py`.
+**Recommendation:** Extract shared CNEMC utilities into a `data_prep/cnemc_site_data/cnemc_common.py`.
 
 ### 5. `sys.path` Manipulation for Mapbase Imports
 
-Multiple files insert mapbase directory into `sys.path` at runtime:
-- [vis.py:108](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/cnemc_site_data/vis.py#L108)
-- [hima.py:23](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/himawari/hima.py#L23)
-- [plot_event16_mean_integral_2x3.py:49](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/plot_event16_mean_integral_2x3.py#L49)
-- [plot_event16_spatial_heatmaps.py:46](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/plot_event16_spatial_heatmaps.py#L46)
+Multiple files insert the `mapbase` directory into `sys.path` at runtime:
+- [data_prep/cnemc_site_data/vis.py](data_prep/cnemc_site_data/vis.py) (line 108)
+- [data_prep/himawari/hima.py](data_prep/himawari/hima.py) (line 23)
+- [data_prep/merra-2/plot_event16_mean_integral_2x3.py](data_prep/merra-2/plot_event16_mean_integral_2x3.py) (line 49)
+- [data_prep/merra-2/plot_event16_spatial_heatmaps.py](data_prep/merra-2/plot_event16_spatial_heatmaps.py) (line 46)
 
-**Recommendation:** Convert [mapbase](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/merra-2/plot_event16_spatial_heatmaps.py#43-57) into a proper importable package by adding an `__init__.py`, or structure the project with a top-level `pyproject.toml` so relative imports work naturally.
+**Recommendation:** Convert `data_prep/mapbase/` into a proper importable package by adding an `__init__.py`, or add a root-level `pyproject.toml` so the package can be installed with `pip install -e .`.
 
 ---
 
@@ -109,129 +119,130 @@ Multiple files insert mapbase directory into `sys.path` at runtime:
 
 Nearly every script uses hardcoded `C:\DOCUMENTO\...` paths:
 
-| File | Example |
-|------|---------|
-| `build_documento_nc.py` | `INPUT_ROOT = r"C:\DOCUMENTO"` |
-| `prepro.py` | `DEFAULT_SCAN_ROOT = r"C:\DOCUMENTO"` |
-| `vis.py` | `NC_PATH = r"C:\DOCUMENTO\nc_out\..."` |
-| `hima.py` | `DEFAULT_DAT_ROOT = Path(r"C:\DOCUMENTO\himawari")` |
-| `fetch2.py` | `LOCAL_NC_GLOB` with full path |
+| File | Hardcoded Path Variable |
+|------|------------------------|
+| `build_documento_nc.py` | `INPUT_ROOT` |
+| `prepro.py` | `DEFAULT_SCAN_ROOT` |
+| `vis.py` | `NC_PATH` |
+| `hima.py` | `DEFAULT_DAT_ROOT` |
+| `fetch2.py` | `LOCAL_NC_GLOB` |
 | `fetch_data.py` | `WEBCRAWLER_DIR`, `OTF_URL_LIST_FILE` |
 | `fetchch.py` | `TXT_PATH` |
 | `openfet.py` | `LINKLIST_PATH`, `LANZHOU_CSV_PATH` |
 
-**Impact:** The project is not portable or reproducible on another machine without editing every script.
+**Impact:** The project cannot be run on another machine without editing every script individually.
 
-**Recommendation:** 
-- Use a central config file (`config.yaml` or `.env`) for all data root paths 
-- Or use relative paths from the project root via `Path(__file__).resolve().parents[N]`
+**Recommendation:**
+- Use a central `config.yaml` or `.env` file for all data root paths
+- Or use relative paths computed via `Path(__file__).resolve().parents[N]` where paths are predictable
 
 ### 7. Three Different Event Detection Implementations
 
 | File | Function | Approach |
 |------|----------|----------|
-| `fetch2.py` | `detect_events()` | Dual-criteria (primary + secondary), segment-based with merge |
-| `fetch_data.py` | `detect_events_hourly()` | Single-criterion, flag-based with exclusive end |
-| `openfet.py` | `detect_events()` | Single-criterion, `while`-loop scanner |
+| `fetch2.py` | `detect_events()` | Dual-criteria (primary + secondary), segment-based with gap-merge |
+| `fetch_data.py` | `detect_events_hourly()` | Single-criterion, flag-based with exclusive end timestamp |
+| `openfet.py` | `detect_events()` | Single-criterion, `while`-loop scanner with inclusive end |
 
-These use **different boundary conventions** (inclusive vs exclusive end timestamps) and **different merge strategies**. A researcher running `fetch_data.py` vs `fetch2.py` could get different event counts from the same data.
+These use **different boundary conventions** (inclusive vs. exclusive end) and **different merge strategies**. Running `fetch_data.py` vs `fetch2.py` on the same data can produce different event counts, which is a reproducibility problem.
 
-**Recommendation:** Consolidate into one parameterized `detect_events()` with an option for dual-criteria support.
+**Recommendation:** Consolidate into one parameterized `detect_events()` function with an optional dual-criteria mode.
 
 ### 8. Mixed Language in Code Comments
 
-Comments are a mix of English and Chinese across the codebase:
-- `fetch_data.py`: `# 事件识别（小时级）`, `# 去重`, `raise RuntimeError("没有提取到小时序列")`
-- `fetchch.py`: `# 去重但保序`, error messages in Chinese
-- `openfet.py`: `# 你需要改的配置`, `# 兰州坐标`
+Comments and error messages are a mix of English and Chinese throughout:
+- `fetch_data.py`: `# 事件识别（小时级）`, `raise RuntimeError("没有提取到小时序列")`
+- `fetchch.py`: `# 去重但保序`, Chinese error messages
+- `openfet.py`: `# 你需要改的配置（只改这里）`, `# 兰州坐标`
 
-**Recommendation:** Standardize to English for comments, error messages, and variable names in a research codebase intended for publication/sharing.
+**Recommendation:** Standardize to English for all comments, docstrings, and error messages in a codebase intended for publication or collaboration.
 
 ### 9. No Dependency Management
 
-There's no `requirements.txt`, `pyproject.toml`, or `environment.yml`. The project depends on:
+There is no `requirements.txt`, `pyproject.toml`, or `environment.yml`. The project depends on a significant number of external packages:
+
 ```
-numpy, pandas, xarray, netCDF4, matplotlib, cartopy, scipy, 
+numpy, pandas, xarray, netCDF4, matplotlib, cartopy, scipy,
 shapely, requests, beautifulsoup4, lxml, deep_translator (optional),
 certifi, urllib3
 ```
 
-**Recommendation:** Create a `requirements.txt` or `pyproject.toml` for reproducibility.
+**Recommendation:** Create a `requirements.txt` pinning at least major versions, or a `pyproject.toml` for full reproducibility.
 
 ---
 
 ## 🔵 Minor Issues
 
-### 10. `_tmp_bt_check.py` — Debug Script Left in Repo
+### 10. Debug Script Left in Repository
 
-[_tmp_bt_check.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/himawari/_tmp_bt_check.py) is a throwaway debug script with minimal variable names (`b`, `L`, `off`) and no docstrings. Not harmful, but clutters the repo.
+[data_prep/himawari/_tmp_bt_check.py](data_prep/himawari/_tmp_bt_check.py) is a throwaway debug script with minimal variable names (`b`, `L`, `off`) and no docstrings. Not harmful, but it clutters the repository.
 
 ### 11. `prepro.py` Mixes Script and Notebook Cell Patterns
 
-Lines 355-409 of [prepro.py](file:///c:/DOCUMENTO/Sand-and-Dust-Storms-and-Human-Health/data_prep/cnemc_site_data/prepro.py#L355-L409) contain a `#%%` cell block that runs plotting code **outside** `if __name__ == "__main__"`. If imported as a module, this code would execute unintentionally.
+Lines 355–409 of [prepro.py](data_prep/cnemc_site_data/prepro.py) contain a `#%%` cell block that runs plotting code **outside** any `if __name__ == "__main__"` guard. If this file is ever imported as a module, that code will execute unintentionally.
 
 ### 12. Bare `except Exception` Blocks
 
-Several files catch broad exceptions silently:
-- `build_documento_nc.py:751` — `mem._mmap.close()` in bare except
-- `fetch_data.py:517-519` — `read_any_csv()` swallows all errors across 12 encoding/delimiter combinations
+Several files catch exceptions too broadly:
+- `build_documento_nc.py` line 751 — `mem._mmap.close()` wrapped in a bare `except`  
+- `fetch_data.py` lines 517–519 — `read_any_csv()` silently swallows all errors across 12 encoding/delimiter combinations
 
-**Recommendation:** Catch specific exceptions and log warnings.
+**Recommendation:** Catch specific exception types and use `logging.warning()` rather than silent suppression.
 
-### 13. `openfet.py` Writes to User Home `.netrc` Without Warning
+### 13. `openfet.py` Overwrites `~/_netrc` Without Warning
 
-The `ensure_netrc()` function at line 56 **overwrites** `~/_netrc` without checking if it already exists with other credentials. This could break other tools.
+The `ensure_netrc()` function (line 56) unconditionally **overwrites** `~/_netrc` with a single machine entry. If the file already contains credentials for other services, they will be silently lost.
 
-### 14. Output File Collisions
+### 14. Output File Name Collisions
 
-Both `fetch2.py` and `openfet.py` write to identically named output files (`hourly_timeseries_with_event_mark.csv`, `dust_events_summary.csv`) but in different output directories. This can cause confusion about which "events summary" is authoritative.
+Both `fetch2.py` and `openfet.py` write identically named output files (`hourly_timeseries_with_event_mark.csv`, `dust_events_summary.csv`) to different output directories. This can cause confusion about which "events summary" is the authoritative one.
 
-### 15. No Unit Tests or Automated Tests
+### 15. No Unit Tests
 
-The project has no test suite. Given the complexity of event detection, interpolation logic, and coordinate transformations, these would be high-value investments.
+The project has no test suite. Given the complexity of event detection, interpolation logic, and coordinate transformations, even a small set of unit tests would significantly improve confidence during refactoring.
 
 ---
 
 ## 📋 Summary Table
 
-| Severity | Issue | Effort to Fix |
-|----------|-------|---------------|
-| 🔴 Critical | Hardcoded credentials in 4 files | Low — move to env vars |
+| Severity | Issue | Estimated Effort |
+|----------|-------|-----------------|
+| 🔴 Critical | Hardcoded credentials in 4 files | Low — use env vars |
 | 🔴 Critical | No `.gitignore` | Low — create file |
-| 🟡 Significant | Massive MERRA-2 code duplication | Medium — extract shared utils |
-| 🟡 Significant | Duplicate code in CNEMC scripts | Medium — extract common module |
+| 🟡 Significant | MERRA-2 code duplication (4 scripts) | Medium — extract utils module |
+| 🟡 Significant | Duplicate code in CNEMC scripts | Medium — `cnemc_common.py` |
 | 🟡 Significant | `sys.path` hacking for mapbase | Medium — package properly |
-| 🟠 Moderate | Hardcoded absolute paths | Medium — centralize config |
+| 🟠 Moderate | Hardcoded absolute Windows paths | Medium — centralize config |
 | 🟠 Moderate | 3 divergent event detection engines | Medium — unify |
-| 🟠 Moderate | Mixed-language comments | Low — translate |
-| 🟠 Moderate | No dependency management | Low — create requirements.txt |
+| 🟠 Moderate | Mixed-language comments | Low — translate to English |
+| 🟠 Moderate | No dependency management | Low — `requirements.txt` |
 | 🔵 Minor | Debug script in repo | Trivial — delete or move |
-| 🔵 Minor | Cell code outside `__main__` guard | Low — wrap in function |
-| 🔵 Minor | Bare except blocks | Low — narrow exceptions |
-| 🔵 Minor | `.netrc` overwrite risk | Low — check before write |
-| 🔵 Minor | Output file name collisions | Low — namespace or rename |
-| 🔵 Minor | No tests | High (but high-value) |
+| 🔵 Minor | Notebook cell outside `__main__` guard | Low — wrap in function |
+| 🔵 Minor | Bare `except` blocks | Low — narrow exception types |
+| 🔵 Minor | `_netrc` overwrite risk | Low — check before write |
+| 🔵 Minor | Output filename collisions | Low — namespace outputs |
+| 🔵 Minor | No unit tests | High effort, high value |
 
 ---
 
-## Positive Highlights 👍
+## 👍 Positive Highlights
 
 | Aspect | Details |
 |--------|---------|
 | **Scientific rigor** | Annual invalidation + conservative short-gap interpolation in `build_documento_nc.py` and `prepro.py` is methodologically sound |
-| **Satellite processing** | `hima.py` has a clean, well-typed pipeline from raw HSD binary → BT → Dust RGB → cloud mask → station collocation |
-| **Memory management** | `build_documento_nc.py` uses `numpy.memmap` to handle large year-long NetCDF builds without blowing memory |
-| **Mapbase library** | `cnmap.py` (1926 lines) is a comprehensive, self-contained cartographic toolkit with DSATUR graph coloring for province maps — impressive |
-| **Robust downloading** | `fetchch.py`/`fetch2.py` handle URS redirect chains, partial download recovery, and HTML-instead-of-NetCDF detection |
-| **Translation pipeline** | `build_documento_nc.py` has a 3-tier translation fallback (deep_translator → direct API → rule-based) for Chinese station metadata |
-| **Web crawler** | `zonghe.py` has clean exponential-backoff retry logic and dual-source (weather + AQI) per-month merge by normalized date keys |
+| **Satellite processing** | `hima.py` has a clean, well-typed pipeline: HSD binary → BT → Dust RGB → cloud mask → station collocation |
+| **Memory management** | `build_documento_nc.py` uses `numpy.memmap` for memory-efficient year-long NetCDF construction |
+| **Mapbase library** | `cnmap.py` (~1900 lines) is a comprehensive cartographic toolkit including DSATUR graph-coloring for province maps |
+| **Robust downloading** | `fetchch.py` / `fetch2.py` handle URS redirect chains, partial download recovery, and HTML-response detection |
+| **Translation pipeline** | `build_documento_nc.py` has a 3-tier translation fallback (deep_translator → direct API → rule-based) for Chinese station names |
+| **Web crawler** | `zonghe.py` has clean exponential-backoff retry and dual-source (weather + AQI) per-month merge by normalized date key |
 
 ---
 
 ## Recommended Priority Actions
 
-1. **Immediately** rotate Earthdata password and remove credentials from code
-2. Add `.gitignore` and `requirements.txt`
-3. Extract shared MERRA-2 utilities to eliminate 4-way duplication  
-4. Unify event detection into a single parameterized function
-5. Move hardcoded paths to a central configuration mechanism
+1. **Immediately** rotate the Earthdata password and remove credentials from all scripts
+2. Add `.gitignore` (prevent future leaks) and `requirements.txt` (reproducibility)
+3. Extract shared MERRA-2 utilities into a single module to eliminate 4-way duplication
+4. Unify the three event detection implementations into one parameterized function
+5. Move all hardcoded data paths to a central configuration file
