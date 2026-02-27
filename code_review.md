@@ -5,6 +5,18 @@
 
 ---
 
+## Table of Contents
+1. [Overall Assessment](#overall-assessment)
+2. [🔴 Critical Issues](#🔴-critical-issues)
+3. [🟡 Significant Issues](#🟡-significant-issues)
+4. [🟠 Moderate Issues](#🟠-moderate-issues)
+5. [🔵 Minor Issues](#🔵-minor-issues)
+6. [📋 Summary Table](#📋-summary-table)
+7. [👍 Positive Highlights](#👍-positive-highlights)
+8. [Recommended Priority Actions](#recommended-priority-actions)
+9. [🚀 Future Plan (Based on Project Roadmap)](#🚀-future-plan-based-on-project-roadmap)
+
+---
 ## Overall Assessment
 
 This is a **well-structured research project** with a clear scientific focus: linking sand/dust storm events to human health outcomes. The codebase covers data acquisition, preprocessing, event detection, satellite collocation, and spatial visualization — a solid foundation for epidemiological analysis.
@@ -246,3 +258,28 @@ The project has no test suite. Given the complexity of event detection, interpol
 3. Extract shared MERRA-2 utilities into a single module to eliminate 4-way duplication
 4. Unify the three event detection implementations into one parameterized function
 5. Move all hardcoded data paths to a central configuration file
+
+---
+
+## 🚀 Future Plan (Based on Project Roadmap)
+
+Based on the strategic goals outlined in the README, after the foundational codebase issues are resolved, the project should seamlessly transition into its core scientific and analytical phases. We have already laid the baseline infrastructure for Phases 1 through 4:
+
+### Phase 1: Establish Health & Exposure Data Harmonization (Baseline Complete)
+- **Finalize Spatiotemporal Alignment:** Institutionalized the daily/weekly merging pipeline for MERRA-2 exposure metrics and CNEMC site data (see `data_prep/exposure_engineering/event_builder.py`).
+- **Dust/Non-Dust PM Separation:** Consolidated proxy-based methodologies for distinguishing dust-driven PM from background anthropogenic PM (see `data_prep/exposure_engineering/dust_separation.py`).
+
+### Phase 2: Implement Health-Risk Modeling (Baseline Complete)
+- **GAM & DLNM Construction:** Built baseline scripts for Generalized Additive Models (GAM) via `pygam` and Distributed Lag Nonlinear Models (DLNM) in R (see `health_modeling/gam_baseline.py` and `dlnm_baseline.R`).
+- **Multi-Site Analysis Infrastructure:** Prepared the random-effects meta-analysis module to pool city-specific health risks together (see `health_modeling/meta_analysis.py`).
+
+### Phase 3: Integrate Causal Inference & Machine Learning (Baseline Complete)
+- **Causal Frameworks:** Designed a structural DoWhy baseline with Directed Acyclic Graphs (DAGs) and adjustment sets to separate weather confounders from PM-health impacts (see `health_modeling/causal_baseline.py`).
+- **ML Risk Classifiers:** Configured a fast `TabPFN` baseline classifier to map health/exposure variables into High/Low risk thresholds (see `health_modeling/tabpfn_baseline.py`).
+
+### Phase 4: Develop Decision Support Tools (Baseline Complete)
+- **Rehearsal Learning Implementation:** Drafted a skeleton mapper to funnel aligned spatiotemporal and intervention data into the specific `(X, Z, Y)` tensor formats required by Grad-RH and AUF-MICNS algorithms (see `health_modeling/decision_support_skeleton.py`).
+
+### Phase 5: Comprehensive Evaluation & Extension (Pending)
+- **Model Diagnostics:** Formalize exposure evaluation metrics (e.g., hit rate against AERONET) and health model robustness checks (residual autocorrelation, overdispersion).
+- **Data Scaling:** Extend data sourcing effectively beyond the Event 4 and Event 16 snapshots, applying these baseline models to historical decadal trends.
