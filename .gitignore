@@ -1,13 +1,26 @@
-downloads_merra2_subset/
+# Credentials & secrets
+.env
+_netrc
+.netrc
 
-# Byte-compiled / optimized / DLL files
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Mapbase boundaries
-data_prep/mapbase/geoBoundaries-CHN-ADM0-all/
-data_prep/mapbase/geoBoundaries-CHN-ADM1-all/
-data_prep/mapbase/geoBoundaries-CHN-ADM2-all/
-data_prep/mapbase/geoBoundariesCGAZ_ADM0/
-data_prep/mapbase/geoBoundariesCGAZ_ADM1/
+# IDE
+.idea/
+.vscode/
+
+# Partial downloads
+*.part
+
+# Large data & Maps (Project specific)
+downloads_merra2_subset/
+data_prep/mapbase/geoBoundaries*/
+
+# Generated data outputs
+_tmp_*/
+out_*/
+nc_out/
+downloads_*/

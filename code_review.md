@@ -65,8 +65,8 @@ _netrc
 
 # Python cache
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
 
 # IDE
 .idea/
@@ -75,11 +75,16 @@ __pycache__/
 # Partial downloads
 *.part
 
+# Large data & Maps (Project specific)
+downloads_merra2_subset/
+data_prep/mapbase/geoBoundaries*/
+
 # Generated data outputs
 _tmp_*/
 out_*/
 nc_out/
 downloads_*/
+
 ```
 
 ---
