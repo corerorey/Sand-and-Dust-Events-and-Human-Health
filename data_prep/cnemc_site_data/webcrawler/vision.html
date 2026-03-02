@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>天气后报网 CSV 可视化仪表盘（AQI + 天气）</title>
+  <title>空气质量与气象生态数据集可视化分析仪表盘</title>
 
   <!-- Plotly（画图） -->
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -12,28 +12,27 @@
 
   <style>
     :root{
-      --bg:#0b1220;
-      --card:#111a2c;
-      --card2:#0f172a;
-      --text:#e6edf7;
-      --muted:#9fb0c3;
-      --line:#25324a;
-      --accent:#5aa7ff;
-      --good:#7CFC98;
-      --ok:#FFD54A;
-      --light:#FFB74A;
-      --mid:#FF7A59;
-      --heavy:#FF4D4D;
-      --severe:#B24DFF;
-      --shadow: 0 8px 24px rgba(0,0,0,.35);
-      --radius: 16px;
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --text:#1e293b;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --accent:#3b82f6;
+      --good:#22c55e;
+      --ok:#eab308;
+      --light:#f97316;
+      --mid:#ef4444;
+      --heavy:#dc2626;
+      --severe:#991b1b;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --radius: 12px;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial;
-      background: radial-gradient(1200px 600px at 10% 0%, rgba(90,167,255,.18), transparent 60%),
-                  radial-gradient(1200px 600px at 90% 10%, rgba(178,77,255,.12), transparent 55%),
+      background: radial-gradient(circle at top right, rgba(59,130,246,0.08), transparent 40%),
+                  radial-gradient(circle at bottom left, rgba(168,85,247,0.08), transparent 40%),
                   var(--bg);
       color:var(--text);
     }
@@ -66,8 +65,8 @@
     }
 
     .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-      border: 1px solid rgba(255,255,255,.07);
+      background: var(--card);
+      border: 1px solid var(--line);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       padding: 14px;
@@ -75,8 +74,9 @@
     .card h2{
       margin:0 0 10px;
       font-size: 15px;
-      font-weight: 650;
+      font-weight: 600;
       letter-spacing: .2px;
+      color: var(--text);
     }
 
     .controls{
@@ -97,22 +97,32 @@
     label{
       font-size: 12px;
       color: var(--muted);
+      font-weight: 500;
     }
     input, select, button{
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(16, 24, 42, .75);
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--bg);
       color: var(--text);
       padding: 10px 10px;
       outline:none;
       font-size: 13px;
+      transition: all 0.2s;
+    }
+    input:focus, select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
     }
     input[type="file"]{ padding: 8px; }
     button{
       cursor:pointer;
-      transition: transform .05s ease;
-      background: linear-gradient(180deg, rgba(90,167,255,.35), rgba(90,167,255,.18));
+      background: var(--accent);
+      color: white;
+      font-weight: 500;
+      border: none;
     }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #bae6fd; cursor: not-allowed; }
     button:active{ transform: translateY(1px); }
     .hint{
       color: var(--muted);
@@ -127,19 +137,21 @@
       margin-top:10px;
     }
     .kpi{
-      background: rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius: 14px;
-      padding: 10px;
+      background: var(--bg);
+      border:1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
     }
     .kpi .t{
       font-size: 12px;
       color: var(--muted);
       margin-bottom: 6px;
+      font-weight: 500;
     }
     .kpi .v{
       font-size: 18px;
-      font-weight: 750;
+      font-weight: 700;
+      color: var(--text);
     }
     .kpi .s{
       margin-top: 4px;
@@ -148,43 +160,44 @@
     }
 
     .month-box{
-      background: rgba(16, 24, 42, .55);
-      border: 1px solid rgba(255,255,255,.08);
+      background: var(--bg);
+      border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 12px;
     }
     .month-title{
       font-size: 15px;
-      font-weight: 750;
+      font-weight: 600;
       margin: 0 0 10px;
+      color: var(--text);
     }
     .statline{
       display:flex;
       flex-wrap: wrap;
       gap: 10px 14px;
-      font-size: 14px;
+      font-size: 13px;
       line-height: 1.45;
     }
     .tag{
       display:flex;
       gap:6px;
       align-items: baseline;
-      padding: 4px 8px;
+      padding: 4px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      background: var(--card);
     }
-    .tag b{font-weight:800}
-    .c-good{color: var(--good)}
-    .c-ok{color: var(--ok)}
-    .c-light{color: var(--light)}
-    .c-mid{color: var(--mid)}
-    .c-heavy{color: var(--heavy)}
-    .c-severe{color: var(--severe)}
+    .tag b{font-weight:700}
+    .c-good{color: #16a34a; background: #dcfce7; border-color: #bbf7d0;}
+    .c-ok{color: #d97706; background: #fef9c3; border-color: #fef08a;}
+    .c-light{color: #ea580c; background: #ffedd5; border-color: #fed7aa;}
+    .c-mid{color: #dc2626; background: #fee2e2; border-color: #fecaca;}
+    .c-heavy{color: #991b1b; background: #fef2f2; border-color: #fecaca;}
+    .c-severe{color: #701a75; background: #faf5ff; border-color: #f3e8ff;}
     .divider{
       height:1px;
-      background: rgba(255,255,255,.08);
-      margin: 10px 0;
+      background: var(--line);
+      margin: 12px 0;
     }
 
     .main{
@@ -199,19 +212,25 @@
       flex-wrap: wrap;
     }
     .tab{
-      padding: 8px 10px;
+      padding: 8px 16px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
+      border: 1px solid transparent;
+      background: var(--bg);
       cursor:pointer;
       font-size: 13px;
+      font-weight: 500;
       color: var(--muted);
       user-select:none;
+      transition: all 0.2s;
+    }
+    .tab:hover{
+        background: var(--line);
+        color: var(--text);
     }
     .tab.active{
-      color: var(--text);
-      background: rgba(90,167,255,.20);
-      border-color: rgba(90,167,255,.35);
+      color: var(--accent);
+      background: #eff6ff;
+      border-color: #bfdbfe;
     }
     .panel{ display:none; }
     .panel.active{ display:block; }
@@ -231,30 +250,33 @@
     .table-wrap{
       overflow:auto;
       max-height: 520px;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.08);
+      border-radius: 8px;
+      border: 1px solid var(--line);
     }
     table{
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 13px;
       min-width: 1100px;
-      background: rgba(16,24,42,.35);
+      background: var(--card);
     }
     th, td{
-      padding: 8px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
       white-space: nowrap;
     }
+    td{ color: var(--text); }
     th{
       position: sticky;
       top: 0;
-      background: rgba(16,24,42,.92);
+      background: var(--bg);
       z-index:1;
       text-align:left;
       color: var(--muted);
+      font-weight: 600;
       cursor: pointer;
     }
+    th:hover { background: var(--line); }
     .searchbar{
       display:flex;
       gap:10px;
@@ -263,19 +285,20 @@
     }
     .pill{
       display:inline-block;
-      padding:4px 8px;
+      padding:4px 10px;
       border-radius: 999px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.08);
+      background: var(--bg);
+      border: 1px solid var(--line);
       color: var(--muted);
       font-size: 12px;
+      font-weight: 500;
     }
   </style>
 </head>
 
 <body>
 <header>
-  <h1>天气后报网 CSV 可视化仪表盘（AQI + 天气）</h1>
+  <h1>空气质量与气象生态数据集可视化分析仪表盘</h1>
   <div class="sub">
     上传你爬取导出的 CSV，即可自动生成：月度统计（优/良/污染天数、AQI/PM2.5 极值）、时间序列、污染物全套、天气/风分布、AQI 与温度/PM2.5 关系、相关性热力图、数据表。<br/>
     支持 timestep 聚合（日 / 周 / 月），所有图表同步切换。
@@ -301,9 +324,10 @@
         <div class="field">
           <label>timestep（时间尺度）</label>
           <select id="timestepSelect" disabled>
-            <option value="day">日（原始每日）</option>
-            <option value="week">周（按周聚合）</option>
-            <option value="month">月（按月聚合）</option>
+            <option value="raw">原始数据（时/日）</option>
+            <option value="day">日（按日均值）</option>
+            <option value="week">周（按周均值）</option>
+            <option value="month">月（按月均值）</option>
           </select>
         </div>
       </div>
@@ -422,17 +446,25 @@
     <!-- 相互关系 -->
     <section class="panel" id="panel-relationships">
       <div class="card">
-        <h2>相互关系（相关性、散点、解释）</h2>
+        <h2>相互关系（散点与相关性）</h2>
 
-        <div class="chart-grid two">
-          <div class="card" style="padding:10px">
-            <h2 style="margin:6px 6px 0">AQI vs PM2.5（点越多关系越稳定）</h2>
-            <div id="chartScatterAqiPm25" style="height:360px"></div>
+        <div class="card" style="padding:12px; margin-bottom:14px; background: #f8fafc;">
+          <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+             <h2>自定义散点/拟合探索</h2>
+             <div style="display:flex; gap: 10px; align-items:center;">
+                <label>X轴:</label>
+                <select id="scatterXSelect"></select>
+                <label>Y轴:</label>
+                <select id="scatterYSelect"></select>
+                <button id="updateScatterBtn">更新散点图</button>
+             </div>
           </div>
-          <div class="card" style="padding:10px">
-            <h2 style="margin:6px 6px 0">AQI vs 最高温（temp_high_c）</h2>
-            <div id="chartScatterAqiTemp" style="height:360px"></div>
-          </div>
+          <div id="chartCustomScatter" style="height:350px;"></div>
+        </div>
+
+        <div class="card" style="padding:10px; margin-top:14px">
+          <h2>PM2.5 vs PM10 粗细颗粒物分析 (沙尘事件识别: PM10 >> PM2.5)</h2>
+          <div id="chartScatterPmRatio" style="height:350px;"></div>
         </div>
 
         <div class="card" style="padding:10px; margin-top:14px">
@@ -459,23 +491,36 @@
         <div class="hint">点击表头可排序（升/降）。</div>
       </div>
     </section>
-  </main>
 </div>
 
 <script>
 /** ====== 你CSV的关键字段（全覆盖） ====== */
-const REQUIRED_COLS = [
-  "date","weather_day","weather_night","temp_high","temp_low","wind_day","wind_night",
-  "city_slug","yyyymm",
-  "aqi","aqi_quality","aqi_rank","aqi_pm25","aqi_pm10","aqi_no2","aqi_so2","aqi_co","aqi_o3",
-  "temp_high_c","temp_low_c",
-  "aqi_num","aqi_rank_num","aqi_pm25_num","aqi_pm10_num","aqi_no2_num","aqi_so2_num","aqi_o3_num","aqi_co_num"
-];
+// Since different CSVs have different column names, we look for both lowercase and uppercase variations.
 
-const NUMERIC_COLS = [
-  "temp_high_c","temp_low_c",
-  "aqi_num","aqi_rank_num","aqi_pm25_num","aqi_pm10_num","aqi_no2_num","aqi_so2_num","aqi_o3_num","aqi_co_num"
-];
+const POSSIBLE_COLS = {
+  date: ["date"],
+  hour: ["hour", "date_hour"],
+  city: ["city_slug", "city"],
+  yyyymm: ["yyyymm"],
+  aqi: ["aqi_num", "AQI", "aqi"],
+  pm25: ["aqi_pm25_num", "PM2.5", "PM2.5_24h", "aqi_pm25"],
+  pm10: ["aqi_pm10_num", "PM10", "PM10_24h", "aqi_pm10"],
+  no2: ["aqi_no2_num", "NO2", "NO2_24h", "aqi_no2"],
+  so2: ["aqi_so2_num", "SO2", "SO2_24h", "aqi_so2"],
+  co: ["aqi_co_num", "CO", "CO_24h", "aqi_co"],
+  o3: ["aqi_o3_num", "O3", "O3_24h", "aqi_o3"],
+  temp_high: ["temp_high_c", "temp_high", "Temperature_high"],
+  temp_low: ["temp_low_c", "temp_low", "Temperature_low"],
+  weather_day: ["weather_day", "weather"],
+  weather_night: ["weather_night"],
+  wind_day: ["wind_day", "wind_speed"],
+  quality: ["aqi_quality", "Quality", "quality"],
+  rank: ["aqi_rank_num", "aqi_rank", "rank"]
+};
+
+// We dynamically figure out valid numeric columns later.
+let NUMERIC_COLS = [];
+let ACTIVE_COLS = [];
 
 /** ====== DOM ====== */
 const fileInput = document.getElementById("fileInput");
@@ -496,36 +541,62 @@ const tableSearch = document.getElementById("tableSearch");
 const dataTable = document.getElementById("dataTable");
 const rowCountPill = document.getElementById("rowCountPill");
 
+const scatterXSelect = document.getElementById("scatterXSelect");
+const scatterYSelect = document.getElementById("scatterYSelect");
+const updateScatterBtn = document.getElementById("updateScatterBtn");
+
+// Init Scatter Options
+NUMERIC_COLS.forEach(c => {
+    scatterXSelect.innerHTML += `<option value="${c}">${c}</option>`;
+    scatterYSelect.innerHTML += `<option value="${c}">${c}</option>`;
+});
+scatterYSelect.value = "aqi_num";
+scatterXSelect.value = "aqi_pm25_num";
+
 /** ====== State ====== */
 let rawRows = [];     // 原始每日数据
 let filteredRows = []; // 按筛选后的每日数据
 let aggRows = [];      // 按 timestep 聚合后的数据（用于曲线）
 let tableRows = [];    // 当前表格行（每日）
+let loadedSiteInfo = ""; // Filename parsed site info
 
 /** ====== Utils ====== */
-function parseChineseDateToISO(dateStr){
-  // 支持：2025年01月01日 / 2025-01-01 / 2025/1/1
+function parseChineseDateToISO(dateStr, hourStr){
+  // 支持：2025年01月01日 / 2025-01-01 / 2025/1/1 / 20210101
   if(!dateStr) return null;
   const s = String(dateStr).trim();
-  let m = s.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+  
+  let datePart = "";
+  let m = s.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日( \d{1,2}:\d{1,2}:\d{1,2})?$/);
   if(m){
     const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-    return `${y.toString().padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-  }
-  m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if(m){
+    let t = m[4] || "";
+    datePart = `${y.toString().padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}${t}`;
+  } else if(s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})( \d{1,2}:\d{1,2}:\d{1,2})?$/)){
+    m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})( \d{1,2}:\d{1,2}:\d{1,2})?$/);
     const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-    return `${y.toString().padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    let t = m[4] || "";
+    datePart = `${y.toString().padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}${t}`;
+  } else if(s.match(/^(\d{4})(\d{2})(\d{2})$/)){
+    m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    datePart = `${y.toString().padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  } else {
+      // 兜底：尝试 Date
+      const dt = new Date(s.replace(/-/g, '/'));
+      if(!isNaN(dt.getTime())){
+        const y = dt.getFullYear(), mo = dt.getMonth()+1, d = dt.getDate();
+        const h = dt.getHours(), min = dt.getMinutes(), sec = dt.getSeconds();
+        const str = `${y.toString().padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        if (h===0 && min===0 && sec===0 && !s.includes(':')) datePart = str;
+        else datePart = `${str} ${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+      }
   }
-  // 兜底：尝试 Date
-  const dt = new Date(s);
-  if(!isNaN(dt.getTime())){
-    const y = dt.getFullYear();
-    const mo = dt.getMonth()+1;
-    const d = dt.getDate();
-    return `${y.toString().padStart(4,"0")}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  
+  if (datePart && hourStr !== undefined && hourStr !== null && hourStr !== "") {
+     return `${datePart} ${String(hourStr).padStart(2,"0")}:00:00`;
   }
-  return null;
+  return datePart || null;
 }
 
 function toNumber(x){
@@ -560,7 +631,8 @@ function fmt(x, digits=0){
 
 function getWeekKey(dateISO){
   // 周聚合：以周一为一周起点（ISO week-like）
-  const d = new Date(dateISO + "T00:00:00");
+  const dStr = dateISO.split(' ')[0];
+  const d = new Date(dStr + "T00:00:00");
   const day = d.getDay(); // 0=Sun..6=Sat
   const diff = (day === 0 ? -6 : 1 - day); // to Monday
   d.setDate(d.getDate() + diff);
@@ -582,27 +654,138 @@ function qualityColorClass(q){
   return "";
 }
 
+function downsampleLTTB(dataX, dataY, threshold) {
+  if (!dataX || !dataY || dataX.length !== dataY.length) return { x: [], y: [] };
+  
+  // Filter out any points where Y is null/NaN to prevent gaps breaking the downsampler algorithm logic
+  const vX = [];
+  const vY = [];
+  for(let i=0; i<dataX.length; i++) {
+     if(dataY[i] !== null && !isNaN(dataY[i])) {
+         vX.push(dataX[i]);
+         vY.push(dataY[i]);
+     }
+  }
+
+  const dataLen = vX.length;
+  if(dataLen === 0) return { x: [], y: [] };
+
+  if (threshold >= dataLen || threshold === 0) {
+    return { x: vX, y: vY };
+  }
+
+  let sampledX = [], sampledY = [];
+  let every = (dataLen - 2) / (threshold - 2);
+
+  let a = 0;
+  sampledX.push(vX[a]);
+  sampledY.push(vY[a]);
+
+  for (let i = 0; i < threshold - 2; i++) {
+    let avgRangeStart = Math.floor((i + 1) * every) + 1;
+    let avgRangeEnd = Math.floor((i + 2) * every) + 1;
+    avgRangeEnd = avgRangeEnd < dataLen ? avgRangeEnd : dataLen;
+    let avgRangeLength = avgRangeEnd - avgRangeStart;
+
+    let avgX = 0, avgY = 0;
+    for (let j = avgRangeStart; j < avgRangeEnd; j++) {
+      avgX += j; // Use array index as pseudo-X for uniform spacing
+      avgY += vY[j];
+    }
+    if (avgRangeLength > 0) {
+      avgX /= avgRangeLength;
+      avgY /= avgRangeLength;
+    }
+
+    let rangeOffs = Math.floor(i * every) + 1;
+    let rangeTo = Math.floor((i + 1) * every) + 1;
+    let pointAX = a; 
+    let pointAY = vY[a];
+
+    let maxArea = -1, maxAreaPoint, maxAreaIndex = -1;
+
+    for (let j = rangeOffs; j < rangeTo && j < dataLen; j++) {
+      let area = Math.abs((pointAX - avgX) * (vY[j] - pointAY) - (pointAX - j) * (avgY - pointAY)) * 0.5;
+      if (area > maxArea) {
+        maxArea = area;
+        maxAreaPoint = vY[j];
+        maxAreaIndex = j; 
+      }
+    }
+
+    if (maxAreaIndex !== -1) {
+      sampledX.push(vX[maxAreaIndex]);
+      sampledY.push(maxAreaPoint);
+      a = maxAreaIndex;
+    }
+  }
+
+  const lastIndex = dataLen - 1;
+  sampledX.push(vX[lastIndex]);
+  sampledY.push(vY[lastIndex]);
+
+  return {x: sampledX, y: sampledY};
+}
+
 /** ====== Parsing & Validation ====== */
+let CACHED_MAPPINGS = {};
+
+function mapColumn(row, category) {
+    if (CACHED_MAPPINGS[category]) return row[CACHED_MAPPINGS[category]];
+    
+    // Find mapping
+    for(const colName of POSSIBLE_COLS[category]) {
+        if (row.hasOwnProperty(colName)) {
+            CACHED_MAPPINGS[category] = colName;
+            return row[colName];
+        }
+    }
+    return null;
+}
+
 function normalizeRow(r){
-  const dateRaw = r["date"];
-  const dateISO = parseChineseDateToISO(dateRaw);
-  const city = r["city_slug"] ?? "";
-  const yyyymm = String(r["yyyymm"] ?? "").trim();
+  const dateRaw = mapColumn(r, "date");
+  const hourRaw = mapColumn(r, "hour");
+  const dateISO = parseChineseDateToISO(dateRaw, hourRaw);
+  
+  const city = mapColumn(r, "city") ?? "";
+  
+  let yyyymm = String(mapColumn(r, "yyyymm") ?? "").trim();
+  if(!yyyymm && dateISO) {
+      yyyymm = dateISO.slice(0,7).replace("-", ""); // derive yyyymm from date
+  }
 
   const out = {...r};
   out.__dateISO = dateISO;
   out.__city = city;
   out.__yyyymm = yyyymm;
-
-  // 数值列转 number
-  for(const k of NUMERIC_COLS){
-    out[k] = toNumber(out[k]);
+  
+  // Standardize the core values we chart, so logic remains simpler downstream
+  out.aqi_num = toNumber(mapColumn(r, "aqi"));
+  out.aqi_pm25_num = toNumber(mapColumn(r, "pm25"));
+  out.aqi_pm10_num = toNumber(mapColumn(r, "pm10"));
+  out.aqi_no2_num = toNumber(mapColumn(r, "no2"));
+  out.aqi_so2_num = toNumber(mapColumn(r, "so2"));
+  out.aqi_co_num = toNumber(mapColumn(r, "co"));
+  out.aqi_o3_num = toNumber(mapColumn(r, "o3"));
+  out.aqi_rank_num = toNumber(mapColumn(r, "rank"));
+  out.temp_high_c = toNumber(mapColumn(r, "temp_high"));
+  out.temp_low_c = toNumber(mapColumn(r, "temp_low"));
+  
+  out.aqi_quality = mapColumn(r, "quality") || "";
+  if (!out.aqi_quality && out.aqi_num !== null) {
+      // Auto-derive quality based on AQI Standard thresholds if text is missing
+      if(out.aqi_num <= 50) out.aqi_quality = "优";
+      else if(out.aqi_num <= 100) out.aqi_quality = "良";
+      else if(out.aqi_num <= 150) out.aqi_quality = "轻度污染";
+      else if(out.aqi_num <= 200) out.aqi_quality = "中度污染";
+      else if(out.aqi_num <= 300) out.aqi_quality = "重度污染";
+      else out.aqi_quality = "严重污染";
   }
-
-  // 某些人CSV里 aqi_co 可能是字符串数值，但没给 aqi_co_num；这里兼容
-  if(out["aqi_co_num"] === null || out["aqi_co_num"] === undefined){
-    out["aqi_co_num"] = toNumber(out["aqi_co"]);
-  }
+  
+  out.weather_day = mapColumn(r, "weather_day") || "";
+  out.weather_night = mapColumn(r, "weather_night") || "";
+  out.wind_day = mapColumn(r, "wind_day") || "";
 
   return out;
 }
@@ -610,10 +793,23 @@ function normalizeRow(r){
 function validateColumns(rows){
   if(rows.length === 0) return {ok:false, msg:"CSV 为空"};
   const cols = Object.keys(rows[0]);
-  const missing = REQUIRED_COLS.filter(c => !cols.includes(c));
-  if(missing.length > 0){
-    return {ok:false, msg:`CSV 缺少列：${missing.join(", ")}`};
+  ACTIVE_COLS = cols;
+  
+  NUMERIC_COLS = [];
+  ["aqi_num", "aqi_pm25_num", "aqi_pm10_num", "aqi_no2_num", "aqi_so2_num", "aqi_o3_num", "aqi_co_num", "aqi_rank_num", "temp_high_c", "temp_low_c"].forEach(k => {
+      NUMERIC_COLS.push(k);
+  });
+  
+  // Try mapping the date to ensure critical loading works
+  let dateColFound = false;
+  for(const c of POSSIBLE_COLS["date"]) {
+      if(cols.includes(c)) dateColFound = true;
   }
+  
+  if(!dateColFound) {
+      return {ok:false, msg:`无法在CSV中找到时间列 (date)`};
+  }
+  
   return {ok:true, msg:"OK"};
 }
 
@@ -641,25 +837,31 @@ function applyFilters(){
 
 /** ====== Aggregation ====== */
 function aggregateRows(rows, timestep){
-  if(timestep === "day"){
-    // 直接每日
-    return rows.map(r => ({
-      key: r.__dateISO,
-      dateISO: r.__dateISO,
-      yyyymm: r.__yyyymm,
-      city: r.__city,
-      // 数值列拷贝
-      ...pickNumeric(r),
-      // 分类可用作 hover
-      aqi_quality: r["aqi_quality"] || null
-    }));
+  if(timestep === "raw"){
+    // 直接原始数值
+    return rows.map(r => {
+      const obj = {
+        key: r.__dateISO,
+        dateISO: r.__dateISO,
+        yyyymm: r.__yyyymm,
+        city: r.__city,
+        aqi_quality: r["aqi_quality"] || null
+      };
+      
+      for(const k of NUMERIC_COLS){
+        obj[k] = r[k];
+      }
+      return obj;
+    });
   }
 
   const groups = new Map();
   for(const r of rows){
     let key;
+    let dStr = r.__dateISO.split(' ')[0];
     if(timestep === "month") key = r.__yyyymm;
-    else key = getWeekKey(r.__dateISO); // week start date
+    else if(timestep === "week") key = getWeekKey(dStr); // week start date
+    else if(timestep === "day") key = dStr; // extract daily
 
     if(!groups.has(key)){
       groups.set(key, {key, items: []});
@@ -670,12 +872,12 @@ function aggregateRows(rows, timestep){
   const out = [];
   for(const [key, g] of groups.entries()){
     const items = g.items;
-    // 代表时间：月用当月1号，周用周一
+    // 代表时间：月用当月1号，周用周一，日用日期本身
     let dateISO = null;
     if(timestep === "month"){
       dateISO = `${key.slice(0,4)}-${key.slice(4,6)}-01`;
     }else{
-      dateISO = key; // week start
+      dateISO = key;
     }
 
     const obj = {key, dateISO, yyyymm: (timestep==="month"? key : null)};
@@ -690,14 +892,6 @@ function aggregateRows(rows, timestep){
   return out;
 }
 
-function pickNumeric(r){
-  const obj = {};
-  for(const k of NUMERIC_COLS){
-    obj[k] = r[k];
-  }
-  return obj;
-}
-
 /** ====== Monthly summary (like screenshot) ====== */
 function monthlySummary(month){
   const mRows = filteredRows.filter(r => r.__yyyymm === month);
@@ -708,7 +902,7 @@ function monthlySummary(month){
   for(const q of qualities) counts[q] = 0;
 
   for(const r of mRows){
-    const q = r["aqi_quality"] || "";
+    const q = (r["aqi_quality"] || "").trim() || "未知";
     if(q.includes("优")) counts["优"]++;
     else if(q.includes("良")) counts["良"]++;
     else if(q.includes("轻")) counts["轻度污染"]++;
@@ -806,6 +1000,12 @@ function plotQualityDist(){
     const q = (r["aqi_quality"] || "未知").trim() || "未知";
     counts[q] = (counts[q] || 0) + 1;
   }
+  
+  if (Object.keys(counts).length === 0 || (Object.keys(counts).length === 1 && counts["未知"])) {
+      document.getElementById("chartQualityDist").innerHTML = '<div class="hint" style="padding-top:20px;">无天气质量数据</div>';
+      return;
+  }
+
   const labels = Object.keys(counts);
   const values = labels.map(l => counts[l]);
 
@@ -813,14 +1013,25 @@ function plotQualityDist(){
     type:"bar",
     x: labels,
     y: values,
+    marker: {
+        color: labels.map(q => {
+            if(q.includes("优")) return "#16a34a"; // green
+            if(q.includes("良")) return "#eab308"; // yellow
+            if(q.includes("轻度")) return "#f97316"; // orange
+            if(q.includes("中度")) return "#ef4444"; // red
+            if(q.includes("重度")) return "#dc2626"; // heavy red
+            if(q.includes("严重")) return "#991b1b"; // purple/dark
+            return "#cbd5e1";
+        })
+    },
     hovertemplate: "%{x}<br>%{y} 天<extra></extra>"
   }], {
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:40,r:10,t:10,b:40},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
   }, {displayModeBar:false, responsive:true});
 }
 
@@ -829,8 +1040,10 @@ function plotWeatherDist(){
   const countTop = (key)=>{
     const m = new Map();
     for(const r of filteredRows){
-      const v = (r[key] || "未知").trim() || "未知";
-      m.set(v, (m.get(v)||0)+1);
+      const v = (r[key] || "").trim() || "";
+      if (v) {
+        m.set(v, (m.get(v)||0)+1);
+      }
     }
     const arr = [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8);
     return {x: arr.map(x=>x[0]), y: arr.map(x=>x[1])};
@@ -838,6 +1051,11 @@ function plotWeatherDist(){
 
   const day = countTop("weather_day");
   const night = countTop("weather_night");
+  
+  if (day.x.length === 0 && night.x.length === 0) {
+      document.getElementById("chartWeatherDist").innerHTML = '<div class="hint" style="padding-top:20px;">无天气文本数据<br>(该 CSV 文件可能仅包含污染浓度数值)</div>';
+      return;
+  }
 
   Plotly.newPlot("chartWeatherDist", [
     {type:"bar", name:"白天", x: day.x, y: day.y},
@@ -847,9 +1065,9 @@ function plotWeatherDist(){
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:40,r:10,t:10,b:60},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
     legend:{orientation:"h", y:-0.25}
   }, {displayModeBar:false, responsive:true});
 }
@@ -859,19 +1077,24 @@ function plotAQI(){
   const x = aggRows.map(r => r.dateISO);
   const aqi = aggRows.map(r => r.aqi_num);
   const pm25 = aggRows.map(r => r.aqi_pm25_num);
+  
+  // Dynamic threshold: show ALL points for ≤10k rows, downsample only for truly massive sets
+  const THRESHOLD = x.length <= 10000 ? x.length : 5000;
+  const dsAqi = downsampleLTTB(x, aqi, THRESHOLD);
+  const dsPm25 = downsampleLTTB(x, pm25, THRESHOLD);
 
   Plotly.newPlot("chartAQI", [
-    {type:"scatter", mode:"lines+markers", name:"AQI", x, y: aqi, hovertemplate:"%{x}<br>AQI=%{y:.2f}<extra></extra>"},
-    {type:"scatter", mode:"lines+markers", name:"PM2.5", x, y: pm25, yaxis:"y2", hovertemplate:"%{x}<br>PM2.5=%{y:.2f}<extra></extra>"},
+    {type:"scattergl", mode:"lines", name:"AQI", x:dsAqi.x, y: dsAqi.y, connectgaps:false, hovertemplate:"%{x}<br>AQI=%{y:.2f}<extra></extra>", line:{color:"#3b82f6", width:2}},
+    {type:"scattergl", mode:"lines", name:"PM2.5", x:dsPm25.x, y: dsPm25.y, connectgaps:false, yaxis:"y2", hovertemplate:"%{x}<br>PM2.5=%{y:.2f}<extra></extra>", line:{color:"#eab308", width:2}},
   ],{
-    title:{text:`AQI & PM2.5（${tsName}）`, font:{size:12, color:"#9fb0c3"}, x:0},
+    title:{text:`AQI & PM2.5（${tsName}）`, font:{size:12, color:"#64748b"}, x:0},
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:50,r:45,t:36,b:40},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{title:"AQI", tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis2:{title:"PM2.5", overlaying:"y", side:"right", tickfont:{color:"#9fb0c3"}},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{title:"AQI", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", rangemode:"tozero"},
+    yaxis2:{title:"PM2.5", overlaying:"y", side:"right", tickfont:{color:"#64748b"}, rangemode:"tozero"},
+    font:{color:"#334155"},
     legend:{orientation:"h", y:-0.25}
   }, {displayModeBar:false, responsive:true});
 }
@@ -879,20 +1102,32 @@ function plotAQI(){
 function plotTemp(){
   const tsName = timestepSelect.options[timestepSelect.selectedIndex]?.text || "日";
   const x = aggRows.map(r => r.dateISO);
-  const hi = aggRows.map(r => r.temp_high_c);
-  const lo = aggRows.map(r => r.temp_low_c);
+  
+  const hiRaw = aggRows.map(r => r.temp_high_c);
+  const loRaw = aggRows.map(r => r.temp_low_c);
+  
+  const isAllNull = hiRaw.every(v => v === null) && loRaw.every(v => v === null);
+  if(isAllNull) {
+      document.getElementById("chartTemp").innerHTML = '<div class="hint" style="padding-top:20px;">无温度数据</div>';
+      return;
+  }
+  
+  // Dynamic threshold: keep all hourly points when feasible
+  const TH = x.length <= 10000 ? x.length : 5000;
+  const dsHi = downsampleLTTB(x, hiRaw, TH);
+  const dsLo = downsampleLTTB(x, loRaw, TH);
 
   Plotly.newPlot("chartTemp", [
-    {type:"scatter", mode:"lines+markers", name:"最高温(℃)", x, y: hi},
-    {type:"scatter", mode:"lines+markers", name:"最低温(℃)", x, y: lo},
+    {type:"scattergl", mode:"lines", name:"最高温(℃)", x:dsHi.x, y: dsHi.y, connectgaps:false, line:{color:"#ef4444", width:2}},
+    {type:"scattergl", mode:"lines", name:"最低温(℃)", x:dsLo.x, y: dsLo.y, connectgaps:false, line:{color:"#3b82f6", width:2}},
   ],{
-    title:{text:`温度（${tsName}）`, font:{size:12, color:"#9fb0c3"}, x:0},
+    title:{text:`温度（${tsName}）`, font:{size:12, color:"#64748b"}, x:0},
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:50,r:10,t:36,b:40},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{title:"℃", tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{title:"℃", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
     legend:{orientation:"h", y:-0.25}
   }, {displayModeBar:false, responsive:true});
 }
@@ -901,54 +1136,136 @@ function plotPollutants(){
   const tsName = timestepSelect.options[timestepSelect.selectedIndex]?.text || "日";
   const x = aggRows.map(r => r.dateISO);
 
-  const series = [
+  let series = [];
+  [
     {name:"PM2.5", key:"aqi_pm25_num"},
     {name:"PM10", key:"aqi_pm10_num"},
     {name:"NO2", key:"aqi_no2_num"},
     {name:"SO2", key:"aqi_so2_num"},
     {name:"CO", key:"aqi_co_num"},
     {name:"O3", key:"aqi_o3_num"},
-  ].map(s => ({
-    type:"scatter", mode:"lines", name:s.name, x, y: aggRows.map(r => r[s.key])
-  }));
+  ].forEach(s => {
+      const yRaw = aggRows.map(r => r[s.key]);
+      if(!yRaw.every(v => v === null)) {
+          const TH = x.length <= 10000 ? x.length : 5000;
+          const ds = downsampleLTTB(x, yRaw, TH);
+          series.push({ type:"scattergl", mode:"lines", name:s.name, x: ds.x, y: ds.y, connectgaps:false, line:{width:1.5} });
+      }
+  });
 
   Plotly.newPlot("chartPollutants", series, {
-    title:{text:`污染物全量（${tsName}）`, font:{size:12, color:"#9fb0c3"}, x:0},
+    title:{text:`污染物全量（${tsName}）`, font:{size:12, color:"#64748b"}, x:0},
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:50,r:10,t:36,b:40},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", type: "log", title: "浓度 (Log scale)"},
+    font:{color:"#334155"},
     legend:{orientation:"h", y:-0.22}
+  }, {displayModeBar:false, responsive:true});
+}
+
+function plotScatterPmRatio() {
+  const x = [];
+  const y = [];
+  
+  for(const r of filteredRows){
+    const pm25 = r.aqi_pm25_num;
+    const pm10 = r.aqi_pm10_num;
+    if(pm25!==null && pm10!==null && !isNaN(pm25) && !isNaN(pm10)){
+      x.push(pm25);
+      y.push(pm10);
+    }
+  }
+
+  if(x.length < 2) {
+      document.getElementById("chartScatterPmRatio").innerHTML = '<div class="hint" style="padding-top:20px;">无足够PM2.5和PM10配对数据</div>';
+      return;
+  }
+
+  const fit = linearFit(x, y);
+  if(!fit) {
+      document.getElementById("chartScatterPmRatio").innerHTML = '<div class="hint" style="padding-top:20px;">回归计算失败</div>';
+      return;
+  }
+
+  // Build regression line from fit results
+  const xmin = Math.min(...fit.validX), xmax = Math.max(...fit.validX);
+  const regX = [xmin, xmax];
+  const regY = regX.map(v => fit.a + fit.b * v);
+
+  Plotly.newPlot("chartScatterPmRatio", [
+    {
+      type:"scattergl", mode:"markers", name:"数据点", x, y,
+      marker:{size:4, color:"#94a3b8", opacity:0.6}
+    },
+    {
+      type:"scatter", mode:"lines", name:`拟合: ${fit.eq}`, x: regX, y: regY,
+      line:{color:"#f97316", width:2}
+    },
+    {
+      type:"scatter", mode:"lines", name:"1:1 参考线 (PM2.5=PM10)", 
+      x:[0, xmax], y:[0, xmax],
+      line:{color:"#cbd5e1", width:1, dash:'dot'}
+    }
+  ],{
+    margin:{l:50,r:10,t:30,b:40},
+    paper_bgcolor:"rgba(0,0,0,0)", plot_bgcolor:"rgba(0,0,0,0)",
+    xaxis:{title:"PM2.5", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{title:"PM10", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
+    showlegend:true,
+    legend:{x:0, y:1.1, orientation:"h"},
+    annotations: [{
+        x: 0.05, y: 0.95, xref: 'paper', yref: 'paper',
+        text: `${fit.eq}<br>R² = ${fit.r2.toFixed(4)}<br>n = ${fit.n}`,
+        showarrow: false,
+        font: {size: 13, color: '#f97316'},
+        bgcolor: 'rgba(255,255,255,0.85)',
+        borderpad: 4
+    }]
   }, {displayModeBar:false, responsive:true});
 }
 
 function plotRank(){
   const tsName = timestepSelect.options[timestepSelect.selectedIndex]?.text || "日";
   const x = aggRows.map(r => r.dateISO);
-  const y = aggRows.map(r => r.aqi_rank_num);
+  const yRaw = aggRows.map(r => r.aqi_rank_num);
+  
+  if(yRaw.every(v => v === null)) {
+      document.getElementById("chartRank").innerHTML = '<div class="hint" style="padding-top:20px;">无排名数据</div>';
+      return;
+  }
+  
+  const TH = x.length <= 10000 ? x.length : 5000;
+  const ds = downsampleLTTB(x, yRaw, TH);
 
   Plotly.newPlot("chartRank", [{
-    type:"scatter", mode:"lines+markers", name:"AQI排名", x, y
+    type:"scattergl", mode:"lines", name:"AQI排名", x: ds.x, y: ds.y, line:{color:"#8b5cf6", width:2}
   }],{
-    title:{text:`AQI 排名（${tsName}）`, font:{size:12, color:"#9fb0c3"}, x:0},
+    title:{text:`AQI 排名（${tsName}）`, font:{size:12, color:"#64748b"}, x:0},
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:55,r:10,t:36,b:40},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{title:"名次（越小越好）", tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{title:"名次（越小越好）", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
   }, {displayModeBar:false, responsive:true});
 }
 
 function plotWind(){
   const m = new Map();
   for(const r of filteredRows){
-    const v = (r["wind_day"] || "未知").trim() || "未知";
-    m.set(v, (m.get(v)||0)+1);
+    const v = (r["wind_day"] || "").trim() || "";
+    if (v) {
+        m.set(v, (m.get(v)||0)+1);
+    }
   }
   const top = [...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(top.length === 0) {
+      document.getElementById("chartWind").innerHTML = '<div class="hint" style="padding-top:20px;">无风向数据</div>';
+      return;
+  }
   const x = top.map(x=>x[0]);
   const y = top.map(x=>x[1]);
 
@@ -960,9 +1277,9 @@ function plotWind(){
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:40,r:10,t:10,b:70},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
   }, {displayModeBar:false, responsive:true});
 }
 
@@ -998,84 +1315,58 @@ function linearFit(x, y){
     ssRes += (yi - yhat)*(yi - yhat);
   }
   const r2 = ssTot === 0 ? 0 : (1 - ssRes/ssTot);
+  
+  let eq = `y = ${b.toFixed(4)}x ${a >= 0 ? '+' : '-'} ${Math.abs(a).toFixed(4)}`;
 
-  return {a,b,r2, n};
+  return {a,b,r2, n, eq, validX: xs, validY: ys};
 }
 
-function plotScatterAqiPm25(){
-  const x = filteredRows.map(r => r.aqi_pm25_num);
-  const y = filteredRows.map(r => r.aqi_num);
+function plotCustomScatter() {
+  const xCol = scatterXSelect.value;
+  const yCol = scatterYSelect.value;
+  if (!xCol || !yCol) return;
+
+  const x = filteredRows.map(r => r[xCol]);
+  const y = filteredRows.map(r => r[yCol]);
   const dates = filteredRows.map(r => r.__dateISO);
 
   const fit = linearFit(x,y);
+  
+  if(!fit) {
+      document.getElementById("chartCustomScatter").innerHTML = '<div class="hint" style="padding-top:20px;">数据不足，无法渲染</div>';
+      return;
+  }
+  
   const traces = [{
-    type:"scatter",
+    type:"scattergl", 
     mode:"markers",
     name:"每日点",
-    x, y,
+    x: fit.validX, y: fit.validY,
     text: dates,
-    hovertemplate:"%{text}<br>PM2.5=%{x}<br>AQI=%{y}<extra></extra>",
-    marker:{size:6, opacity:0.7}
+    hovertemplate:`%{text}<br>${xCol}=%{x}<br>${yCol}=%{y}<extra></extra>`,
+    marker:{size:4, opacity:0.3, color: '#5aa7ff'}
   }];
 
-  if(fit){
-    const xs = x.filter(v=>v!==null && !isNaN(v));
-    const xmin = Math.min(...xs), xmax = Math.max(...xs);
-    const xx = [xmin, xmax];
-    const yy = xx.map(v => fit.a + fit.b*v);
-    traces.push({
-      type:"scatter", mode:"lines",
-      name:`拟合线 R²=${fit.r2.toFixed(2)} (n=${fit.n})`,
-      x: xx, y: yy
-    });
-  }
+  const xmin = Math.min(...fit.validX), xmax = Math.max(...fit.validX);
+  const xx = [xmin, xmax];
+  const yy = xx.map(v => fit.a + fit.b*v);
+  traces.push({
+    type:"scatter", mode:"lines",
+    name:`回归: ${fit.eq} (R²=${fit.r2.toFixed(3)})`,
+    x: xx, y: yy,
+    line: {color: '#FFD54A', width: 2}
+  });
 
-  Plotly.newPlot("chartScatterAqiPm25", traces, {
+  const titleEl = document.getElementById("scatterTitle");
+  if(titleEl) titleEl.textContent = `${yCol} vs ${xCol} 散点图及回归分析`;
+  
+  Plotly.newPlot("chartCustomScatter", traces, {
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:55,r:10,t:10,b:45},
-    xaxis:{title:"PM2.5", tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{title:"AQI", tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
-    legend:{orientation:"h", y:-0.25}
-  }, {displayModeBar:false, responsive:true});
-}
-
-function plotScatterAqiTemp(){
-  const x = filteredRows.map(r => r.temp_high_c);
-  const y = filteredRows.map(r => r.aqi_num);
-  const dates = filteredRows.map(r => r.__dateISO);
-
-  const fit = linearFit(x,y);
-  const traces = [{
-    type:"scatter",
-    mode:"markers",
-    name:"每日点",
-    x, y,
-    text: dates,
-    hovertemplate:"%{text}<br>最高温=%{x}℃<br>AQI=%{y}<extra></extra>",
-    marker:{size:6, opacity:0.7}
-  }];
-
-  if(fit){
-    const xs = x.filter(v=>v!==null && !isNaN(v));
-    const xmin = Math.min(...xs), xmax = Math.max(...xs);
-    const xx = [xmin, xmax];
-    const yy = xx.map(v => fit.a + fit.b*v);
-    traces.push({
-      type:"scatter", mode:"lines",
-      name:`拟合线 R²=${fit.r2.toFixed(2)} (n=${fit.n})`,
-      x: xx, y: yy
-    });
-  }
-
-  Plotly.newPlot("chartScatterAqiTemp", traces, {
-    paper_bgcolor:"rgba(0,0,0,0)",
-    plot_bgcolor:"rgba(0,0,0,0)",
-    margin:{l:55,r:10,t:10,b:45},
-    xaxis:{title:"最高温(℃)", tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    yaxis:{title:"AQI", tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{title:xCol, tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    yaxis:{title:yCol, tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
     legend:{orientation:"h", y:-0.25}
   }, {displayModeBar:false, responsive:true});
 }
@@ -1106,14 +1397,25 @@ function pearson(x, y){
 }
 
 function plotCorr(){
-  const cols = NUMERIC_COLS.slice(); // heatmap 全数值列
+  // Only keep columns that have non-null numeric data
+  const validCols = NUMERIC_COLS.filter(c => {
+      const v = filteredRows.find(r => r[c] !== null && !isNaN(r[c]));
+      return !!v;
+  });
+  
+  if(validCols.length < 2) {
+      document.getElementById("chartCorr").innerHTML = '<div class="hint" style="padding-top:20px;">数值列不足，无法生成相关矩阵</div>';
+      return;
+  }
+
   const matrix = [];
-  for(const c1 of cols){
+  for(const c1 of validCols){
     const row = [];
     const x = filteredRows.map(r => r[c1]);
-    for(const c2 of cols){
+    for(const c2 of validCols){
       const y = filteredRows.map(r => r[c2]);
-      row.push(pearson(x,y));
+      const p = pearson(x,y);
+      row.push(p === null ? 0 : p); // default to 0 for missing comparisons
     }
     matrix.push(row);
   }
@@ -1121,16 +1423,19 @@ function plotCorr(){
   Plotly.newPlot("chartCorr", [{
     type:"heatmap",
     z: matrix,
-    x: cols,
-    y: cols,
+    x: validCols,
+    y: validCols,
+    colorscale: "RdBu",
+    reversescale: true,
+    zmin: -1, zmax: 1,
     hovertemplate:"%{y} vs %{x}<br>r=%{z:.2f}<extra></extra>"
   }], {
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:120,r:20,t:20,b:120},
-    xaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)", tickangle:-35},
-    yaxis:{tickfont:{color:"#9fb0c3"}, gridcolor:"rgba(255,255,255,.06)"},
-    font:{color:"#e6edf7"},
+    xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", tickangle:-35},
+    yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
+    font:{color:"#334155"},
   }, {displayModeBar:false, responsive:true});
 }
 
@@ -1138,7 +1443,7 @@ function plotCorr(){
 let tableSort = {col:null, asc:true};
 
 function renderTable(){
-  const cols = REQUIRED_COLS; // 表格显示完整列集合（你要求的那套）
+  const cols = ACTIVE_COLS && ACTIVE_COLS.length > 0 ? ACTIVE_COLS : Object.keys(tableRows[0] || {}); 
 
   // 搜索过滤
   const q = tableSearch.value.trim().toLowerCase();
@@ -1210,18 +1515,18 @@ function refreshAll(){
   renderMonthlyPanel();
   renderKPIs();
 
-  // 图表
-  plotQualityDist();
-  plotWeatherDist();
-  plotAQI();
-  plotTemp();
-  plotPollutants();
-  plotRank();
-  plotWind();
-
-  plotScatterAqiPm25();
-  plotScatterAqiTemp();
-  plotCorr();
+  // 图表 — wrapped in try/catch to prevent one chart failure from killing the rest
+  const safePlot = (fn, name) => { try { fn(); } catch(e) { console.warn(`[${name}] render error:`, e); } };
+  safePlot(plotQualityDist, 'QualityDist');
+  safePlot(plotWeatherDist, 'WeatherDist');
+  safePlot(plotAQI, 'AQI');
+  safePlot(plotTemp, 'Temp');
+  safePlot(plotPollutants, 'Pollutants');
+  safePlot(plotRank, 'Rank');
+  safePlot(plotWind, 'Wind');
+  safePlot(plotCustomScatter, 'CustomScatter');
+  safePlot(plotScatterPmRatio, 'ScatterPmRatio');
+  safePlot(plotCorr, 'Corr');
 
   // 表格
   renderTable();
@@ -1230,13 +1535,22 @@ function refreshAll(){
   const days = filteredRows.length;
   const start = days ? filteredRows[0].__dateISO : "—";
   const end = days ? filteredRows[days-1].__dateISO : "—";
-  metaHint.textContent = `已加载：${rawRows.length} 行；当前筛选：${days} 行（${start} → ${end}），timestep=${timestepSelect.value}`;
+  metaHint.textContent = `已加载：${rawRows.length} 行；当前筛选：${days} 行（${start} → ${end}），timestep=${timestepSelect.value}${loadedSiteInfo}`;
 }
 
 /** ====== Load CSV ====== */
 fileInput.addEventListener("change", (e)=>{
   const file = e.target.files?.[0];
   if(!file) return;
+
+  // 提取文件名中的站点和时间范围信息
+  const filename = file.name;
+  const match = filename.match(/^(.+)_(\d{8}_\d{8})/);
+  if(match){
+      loadedSiteInfo = ` (文件提取: ${match[1]}, ${match[2]})`;
+  } else {
+      loadedSiteInfo = "";
+  }
 
   Papa.parse(file, {
     header: true,
@@ -1256,7 +1570,20 @@ fileInput.addEventListener("change", (e)=>{
         return;
       }
 
+      // Reset caches
+      CACHED_MAPPINGS = {};
       rawRows = rows.map(normalizeRow).filter(r => r.__dateISO);
+
+      // Init Scatter Options based on what's discovered
+      scatterXSelect.innerHTML = "";
+      scatterYSelect.innerHTML = "";
+      NUMERIC_COLS.forEach(c => {
+          scatterXSelect.innerHTML += `<option value="${c}">${c}</option>`;
+          scatterYSelect.innerHTML += `<option value="${c}">${c}</option>`;
+      });
+      scatterYSelect.value = "aqi_num";
+      scatterXSelect.value = "aqi_pm25_num";
+      if (!scatterXSelect.value) scatterXSelect.value = NUMERIC_COLS[1]; // fallback
 
       // city 下拉
       const cities = [...new Set(rawRows.map(r => r.__city).filter(Boolean))].sort();
@@ -1320,6 +1647,8 @@ monthSelect.addEventListener("change", ()=>{
 
 tableSearch.addEventListener("input", renderTable);
 
+updateScatterBtn.addEventListener("click", plotCustomScatter);
+
 /** ====== Tabs ====== */
 document.querySelectorAll(".tab").forEach(tab=>{
   tab.addEventListener("click", ()=>{
@@ -1333,7 +1662,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
     // 切换 tab 后重绘一次，避免 Plotly 在隐藏容器时尺寸不对
     setTimeout(()=>{
       ["chartQualityDist","chartWeatherDist","chartAQI","chartTemp","chartPollutants","chartRank","chartWind",
-       "chartScatterAqiPm25","chartScatterAqiTemp","chartCorr"].forEach(cid=>{
+       "chartCustomScatter", "chartScatterPmRatio", "chartCorr"].forEach(cid=>{
         const el = document.getElementById(cid);
         if(el) Plotly.Plots.resize(el);
       });
