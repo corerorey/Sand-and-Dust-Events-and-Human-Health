@@ -1,9 +1,18 @@
 # DLNM Implementation Boilerplate using R via rpy2 or standalone
 # Distributed Lag Non-linear Models are best implemented in R's `dlnm` package.
 
-library(dlnm)
-library(splines)
-library(stats)
+# Check and load required packages
+required_packages <- c("dlnm", "splines", "stats")
+for (pkg in required_packages) {
+  if (!require(pkg, character.only = TRUE)) {
+    message(paste("Package", pkg, "not found. Attempting to install..."))
+    install.packages(pkg, repos = "https://cloud.r-project.org")
+    if (!require(pkg, character.only = TRUE)) {
+      stop(paste("Failed to install and load package:", pkg))
+    }
+  }
+}
+
 
 fit_dlnm <- function(df, outcome_var, exposure_var, max_lag = 7) {
   
