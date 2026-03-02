@@ -1,0 +1,13 @@
+downloads_merra2_subset/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Mapbase boundaries
+data_prep/mapbase/geoBoundaries-CHN-ADM0-all/
+data_prep/mapbase/geoBoundaries-CHN-ADM1-all/
+data_prep/mapbase/geoBoundaries-CHN-ADM2-all/
+data_prep/mapbase/geoBoundariesCGAZ_ADM0/
+data_prep/mapbase/geoBoundariesCGAZ_ADM1/
