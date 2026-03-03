@@ -104,11 +104,11 @@ Current top-level layout (quick orientation):
   </tr>
   <tr>
     <td align="center"><strong>MERRA-2 Event 4 Mass Diagnostics (Mean + Time-Integrated, 2x2)</strong></td>
-    <td align="center"><strong>CNEMC Site 1477A Long-Range Metrics (2015-01-01 to 2025-12-31)</strong></td>
+    <td align="center"><strong>Interactive Data Visualization Tool</strong></td>
   </tr>
   <tr>
     <td><img src="data_prep/merra-2/out_dust_events/event4_spatial_maps/event4_spatial_mean_integral_mass_2x2.png" alt="MERRA-2 event4 mass mean and time-integrated diagnostics" width="100%"></td>
-    <td><img src="data_prep/cnemc_site_data/1477A_metrics_20150101_20251231.png" alt="CNEMC site 1477A long-range metrics" width="100%"></td>
+    <td style="padding: 15px;"><div align="center"><p><strong><a href="https://corerorey.github.io/Sand-and-Dust-Events-and-Human-Health/data_prep/cnemc_site_data/webcrawler/vision.html" target="_blank">Access the Web Visualizer Here</a></strong></p><p style="font-size: 0.9em; text-align: left;">You can upload files such as <code>data_prep/cnemc_site_data/1477A_yuzhong_lzu_campus_control_20150101_20251231_wide.csv</code> or <code>data_prep/cnemc_site_data/webcrawler/lanzhou_201101_202602.csv</code> from this repository to easily visualize timeseries metrics.</p></div></td>
   </tr>
   <tr>
     <td align="center"><strong>Himawari Dust RGB (Fixed Ranges)</strong></td>
