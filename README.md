@@ -95,8 +95,8 @@ Current top-level layout (quick orientation):
 
 <table>
   <tr>
-    <td align="center"><strong>CNEMC National PM10/PM2.5 Snapshot (2021-03-16 04:00)</strong></td>
-    <td align="center"><strong>MERRA-2 Event 4 AOT Diagnostics (Mean + Time-Integrated, 2x2)</strong></td>
+    <td align="center" width="50%"><strong>CNEMC National PM10/PM2.5 Snapshot (2021-03-16 04:00)</strong></td>
+    <td align="center" width="50%"><strong>MERRA-2 Event 4 AOT Diagnostics (Mean + Time-Integrated, 2x2)</strong></td>
   </tr>
   <tr>
     <td><img src="data_prep/cnemc_site_data/china_sites_pm10_pm25_20210316_0400.png" alt="CNEMC PM10 PM2.5 station snapshot at 2021-03-16 04:00" width="100%"></td>
