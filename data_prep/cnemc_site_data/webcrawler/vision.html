@@ -397,6 +397,7 @@
         <div class="tab active" data-panel="overview">总览</div>
         <div class="tab" data-panel="timeseries">时间序列</div>
         <div class="tab" data-panel="relationships">相互关系</div>
+        <div class="tab" data-panel="statistics">统计分析</div>
         <div class="tab" data-panel="data">数据表</div>
       </div>
     </div>
@@ -487,6 +488,43 @@
             相关系数范围 [-1, 1]：越接近 1 越正相关，越接近 -1 越负相关，接近 0 表示线性相关弱。缺失值会被自动忽略。
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- 统计分析 -->
+    <section class="panel" id="panel-statistics">
+      <div class="card">
+        <h2>沙尘事件检测 / Sand-Dust Storm Event Detection</h2>
+        <div class="hint" style="margin-bottom:10px;">检测条件：PM10 > 150 µg/m³ AND PM10/PM2.5 > 2.0 AND (PM10−PM2.5) > 75 µg/m³。连续标记点（间隔≤2h）合并为一个事件。</div>
+        <div id="sdsEventSummary" style="margin-bottom:10px;"></div>
+        <div class="table-wrap" style="max-height:360px">
+          <table id="sdsEventTable"></table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <h2>描述性统计 / Descriptive Statistics</h2>
+        <div class="hint" style="margin-bottom:8px;">基于当前筛选范围的数值列汇总（类似 pandas.describe()）</div>
+        <div class="table-wrap" style="max-height:400px">
+          <table id="descStatsTable"></table>
+        </div>
+      </div>
+
+      <div class="chart-grid two" style="margin-top:14px">
+        <div class="card" style="padding:10px">
+          <h2 style="margin:6px 6px 0">PM2.5 / PM10 季节性箱线图 / Seasonal Boxplots</h2>
+          <div id="chartSeasonBox" style="height:380px"></div>
+        </div>
+        <div class="card" style="padding:10px">
+          <h2 style="margin:6px 6px 0">PM10 年度趋势箱线图 / Annual Trend</h2>
+          <div id="chartYearBox" style="height:380px"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px; padding:10px">
+        <h2 style="margin:6px 6px 0">WHO / 国标超标率 / Exceedance Analysis (per year)</h2>
+        <div class="hint" style="margin:4px 6px 8px">PM2.5: WHO 24h=15, China II=75 µg/m³ · PM10: WHO 24h=45, China II=150 µg/m³</div>
+        <div id="chartExceedance" style="height:380px"></div>
       </div>
     </section>
 
@@ -970,6 +1008,270 @@ function renderMonthlyPanel(){
   `;
 }
 
+/** ====== Statistical helpers ====== */
+function safeMedian(arr){
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x)).sort((a,b)=>a-b);
+  if(v.length===0) return null;
+  const mid = Math.floor(v.length/2);
+  return v.length%2!==0 ? v[mid] : (v[mid-1]+v[mid])/2;
+}
+function safeStd(arr){
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x));
+  if(v.length<2) return null;
+  const m = v.reduce((a,b)=>a+b,0)/v.length;
+  const ss = v.reduce((a,b)=>a+(b-m)*(b-m),0)/(v.length-1);
+  return Math.sqrt(ss);
+}
+function safePercentile(arr, p){
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x)).sort((a,b)=>a-b);
+  if(v.length===0) return null;
+  const i = (p/100)*(v.length-1);
+  const lo = Math.floor(i), hi = Math.ceil(i);
+  return lo===hi ? v[lo] : v[lo]+(v[hi]-v[lo])*(i-lo);
+}
+function safeSkewness(arr){
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x));
+  if(v.length<3) return null;
+  const n=v.length, m=v.reduce((a,b)=>a+b,0)/n;
+  const s2=v.reduce((a,b)=>a+(b-m)*(b-m),0)/(n-1);
+  const s=Math.sqrt(s2);
+  if(s===0) return 0;
+  const m3=v.reduce((a,b)=>a+Math.pow((b-m)/s,3),0);
+  return (n/((n-1)*(n-2)))*m3;
+}
+
+/** ====== SDS Event Detection ====== */
+let detectedSDSEvents = [];
+
+function detectSDSEvents(rows){
+  // Flag individual rows
+  const flagged = rows.map(r => {
+    const pm10 = r.aqi_pm10_num;
+    const pm25 = r.aqi_pm25_num;
+    if(pm10===null || pm25===null || pm25===0) return false;
+    const ratio = pm10 / pm25;
+    const coarse = pm10 - pm25;
+    return pm10 > 150 && ratio > 2.0 && coarse > 75;
+  });
+
+  // Merge consecutive flagged points (gap tolerance = 2)
+  const events = [];
+  let inEvent = false, evStart = -1;
+  let gapCount = 0;
+  const GAP_TOL = 2;
+
+  for(let i=0; i<rows.length; i++){
+    if(flagged[i]){
+      if(!inEvent){ evStart = i; inEvent = true; }
+      gapCount = 0;
+    } else if(inEvent){
+      gapCount++;
+      if(gapCount > GAP_TOL){
+        events.push({startIdx: evStart, endIdx: i - gapCount});
+        inEvent = false;
+      }
+    }
+  }
+  if(inEvent) events.push({startIdx: evStart, endIdx: rows.length-1});
+
+  // Compute metrics for each event
+  return events.map(ev => {
+    const slice = rows.slice(ev.startIdx, ev.endIdx+1);
+    const pm10s = slice.map(r=>r.aqi_pm10_num).filter(v=>v!==null);
+    const pm25s = slice.map(r=>r.aqi_pm25_num).filter(v=>v!==null);
+    const ratios = slice.map(r => (r.aqi_pm25_num && r.aqi_pm10_num) ? r.aqi_pm10_num/r.aqi_pm25_num : null).filter(v=>v!==null);
+    const coarses = slice.map(r => (r.aqi_pm10_num!==null && r.aqi_pm25_num!==null) ? r.aqi_pm10_num - r.aqi_pm25_num : null).filter(v=>v!==null);
+    return {
+      start: rows[ev.startIdx].__dateISO,
+      end: rows[ev.endIdx].__dateISO,
+      duration: ev.endIdx - ev.startIdx + 1,
+      peakPM10: safeMax(pm10s),
+      peakPM25: safeMax(pm25s),
+      peakRatio: safeMax(ratios),
+      meanCoarse: safeMean(coarses),
+      count: slice.length
+    };
+  }).filter(ev => ev.duration >= 2); // at least 2 consecutive points
+}
+
+function renderEventCatalog(){
+  const tbl = document.getElementById('sdsEventTable');
+  const summary = document.getElementById('sdsEventSummary');
+  if(!detectedSDSEvents || detectedSDSEvents.length === 0){
+    tbl.innerHTML = '';
+    summary.innerHTML = '<span class="pill">未检测到符合条件的沙尘事件 / No SDS events detected</span>';
+    return;
+  }
+  const totalHours = detectedSDSEvents.reduce((a,e)=>a+e.duration,0);
+  summary.innerHTML = `<span class="pill" style="background:#fee2e2;color:#991b1b;border-color:#fecaca;">检测到 <b>${detectedSDSEvents.length}</b> 个沙尘事件，共 <b>${totalHours}</b> 小时/天</span>`;
+
+  const cols = ['#','Start','End','Duration','Peak PM10','Peak PM25','Peak Ratio','Mean Coarse'];
+  const thead = '<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
+  const tbody = '<tbody>'+detectedSDSEvents.map((ev,i)=>`<tr>
+    <td>${i+1}</td><td>${ev.start}</td><td>${ev.end}</td><td>${ev.duration}</td>
+    <td>${fmt(ev.peakPM10,0)}</td><td>${fmt(ev.peakPM25,0)}</td>
+    <td>${fmt(ev.peakRatio,2)}</td><td>${fmt(ev.meanCoarse,1)}</td>
+  </tr>`).join('')+'</tbody>';
+  tbl.innerHTML = thead + tbody;
+}
+
+/** ====== Descriptive Statistics Table ====== */
+function renderDescriptiveStats(){
+  const tbl = document.getElementById('descStatsTable');
+  const statCols = NUMERIC_COLS.filter(c => filteredRows.some(r => r[c]!==null && !isNaN(r[c])));
+  if(statCols.length===0){ tbl.innerHTML=''; return; }
+
+  const stats = statCols.map(c => {
+    const vals = filteredRows.map(r=>r[c]);
+    return {
+      col: c,
+      count: vals.filter(v=>v!==null&&!isNaN(v)).length,
+      mean: safeMean(vals),
+      std: safeStd(vals),
+      min: safeMin(vals),
+      q1: safePercentile(vals, 25),
+      median: safeMedian(vals),
+      q3: safePercentile(vals, 75),
+      max: safeMax(vals),
+      skew: safeSkewness(vals)
+    };
+  });
+
+  const hdr = ['Variable','Count','Mean','Std','Min','Q1','Median','Q3','Max','Skew'];
+  const thead = '<thead><tr>'+hdr.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
+  const tbody = '<tbody>'+stats.map(s=>`<tr>
+    <td><b>${s.col}</b></td><td>${s.count}</td><td>${fmt(s.mean,2)}</td><td>${fmt(s.std,2)}</td>
+    <td>${fmt(s.min,2)}</td><td>${fmt(s.q1,2)}</td><td>${fmt(s.median,2)}</td>
+    <td>${fmt(s.q3,2)}</td><td>${fmt(s.max,2)}</td><td>${fmt(s.skew,2)}</td>
+  </tr>`).join('')+'</tbody>';
+  tbl.innerHTML = thead + tbody;
+}
+
+/** ====== Seasonal Boxplots ====== */
+function getSeason(dateISO){
+  const m = parseInt(dateISO.slice(5,7));
+  if(m>=3 && m<=5) return 'Spring';
+  if(m>=6 && m<=8) return 'Summer';
+  if(m>=9 && m<=11) return 'Autumn';
+  return 'Winter';
+}
+
+function plotSeasonBoxplots(){
+  const seasons = ['Spring','Summer','Autumn','Winter'];
+  const pm25BySeason = {}; const pm10BySeason = {};
+  seasons.forEach(s=>{ pm25BySeason[s]=[]; pm10BySeason[s]=[]; });
+
+  for(const r of filteredRows){
+    if(!r.__dateISO) continue;
+    const s = getSeason(r.__dateISO);
+    if(r.aqi_pm25_num!==null) pm25BySeason[s].push(r.aqi_pm25_num);
+    if(r.aqi_pm10_num!==null) pm10BySeason[s].push(r.aqi_pm10_num);
+  }
+
+  const hasData = seasons.some(s => pm25BySeason[s].length>0 || pm10BySeason[s].length>0);
+  if(!hasData){
+    document.getElementById('chartSeasonBox').innerHTML='<div class="hint" style="padding-top:20px;">无足够PM数据</div>';
+    return;
+  }
+
+  const traces = [];
+  seasons.forEach(s=>{
+    if(pm25BySeason[s].length>0) traces.push({type:'box', y:pm25BySeason[s], name:`PM2.5 ${s}`, marker:{color:'#3b82f6'}, boxpoints:false});
+    if(pm10BySeason[s].length>0) traces.push({type:'box', y:pm10BySeason[s], name:`PM10 ${s}`, marker:{color:'#f97316'}, boxpoints:false});
+  });
+
+  Plotly.newPlot('chartSeasonBox', traces, {
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{l:50,r:10,t:10,b:50},
+    yaxis:{title:'µg/m³', tickfont:{color:'#64748b'}, gridcolor:'#f1f5f9'},
+    xaxis:{tickfont:{color:'#64748b'}},
+    font:{color:'#334155'},
+    boxmode:'group'
+  }, {displayModeBar:false, responsive:true});
+}
+
+/** ====== Annual Trend Boxplots ====== */
+function plotYearBoxplots(){
+  const byYear = {};
+  for(const r of filteredRows){
+    if(!r.__dateISO || r.aqi_pm10_num===null) continue;
+    const yr = r.__dateISO.slice(0,4);
+    if(!byYear[yr]) byYear[yr]=[];
+    byYear[yr].push(r.aqi_pm10_num);
+  }
+  const years = Object.keys(byYear).sort();
+  if(years.length===0){
+    document.getElementById('chartYearBox').innerHTML='<div class="hint" style="padding-top:20px;">无足够PM10数据</div>';
+    return;
+  }
+  const traces = years.map(yr=>({type:'box', y:byYear[yr], name:yr, boxpoints:false}));
+  Plotly.newPlot('chartYearBox', traces, {
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{l:50,r:10,t:10,b:40},
+    yaxis:{title:'PM10 µg/m³', tickfont:{color:'#64748b'}, gridcolor:'#f1f5f9'},
+    xaxis:{tickfont:{color:'#64748b'}},
+    font:{color:'#334155'},
+    showlegend:false
+  }, {displayModeBar:false, responsive:true});
+}
+
+/** ====== Exceedance Analysis ====== */
+function plotExceedance(){
+  const byYear = {};
+  // Aggregate to daily first for exceedance counting
+  const dailyMap = new Map();
+  for(const r of filteredRows){
+    if(!r.__dateISO) continue;
+    const day = r.__dateISO.split(' ')[0];
+    if(!dailyMap.has(day)) dailyMap.set(day, {pm25:[], pm10:[]});
+    const d = dailyMap.get(day);
+    if(r.aqi_pm25_num!==null) d.pm25.push(r.aqi_pm25_num);
+    if(r.aqi_pm10_num!==null) d.pm10.push(r.aqi_pm10_num);
+  }
+
+  const dailyData = [];
+  for(const [day, d] of dailyMap){
+    dailyData.push({
+      year: day.slice(0,4),
+      pm25: d.pm25.length>0 ? safeMean(d.pm25) : null,
+      pm10: d.pm10.length>0 ? safeMean(d.pm10) : null
+    });
+  }
+
+  const years = [...new Set(dailyData.map(d=>d.year))].sort();
+  if(years.length===0){
+    document.getElementById('chartExceedance').innerHTML='<div class="hint" style="padding-top:20px;">无数据</div>';
+    return;
+  }
+
+  const thresholds = [
+    {name:'PM2.5 > WHO(15)', key:'pm25', th:15, color:'#60a5fa'},
+    {name:'PM2.5 > CN-II(75)', key:'pm25', th:75, color:'#2563eb'},
+    {name:'PM10 > WHO(45)', key:'pm10', th:45, color:'#fb923c'},
+    {name:'PM10 > CN-II(150)', key:'pm10', th:150, color:'#dc2626'},
+  ];
+
+  const traces = thresholds.map(t=>{
+    const pcts = years.map(yr=>{
+      const yrData = dailyData.filter(d=>d.year===yr && d[t.key]!==null);
+      if(yrData.length===0) return 0;
+      const exceed = yrData.filter(d=>d[t.key]>t.th).length;
+      return (exceed/yrData.length)*100;
+    });
+    return {type:'bar', name:t.name, x:years, y:pcts, marker:{color:t.color}};
+  });
+
+  Plotly.newPlot('chartExceedance', traces, {
+    barmode:'group',
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{l:50,r:10,t:10,b:40},
+    yaxis:{title:'超标率 %', tickfont:{color:'#64748b'}, gridcolor:'#f1f5f9', rangemode:'tozero'},
+    xaxis:{tickfont:{color:'#64748b'}},
+    font:{color:'#334155'},
+    legend:{orientation:'h', y:-0.25}
+  }, {displayModeBar:false, responsive:true});
+}
+
 /** ====== KPI ====== */
 function renderKPIs(){
   kpiGrid.innerHTML = "";
@@ -978,10 +1280,17 @@ function renderKPIs(){
   const start = days ? filteredRows[0].__dateISO : "—";
   const end = days ? filteredRows[days-1].__dateISO : "—";
 
-  const aqiMean = safeMean(filteredRows.map(r => r.aqi_num));
-  const aqiMax = safeMax(filteredRows.map(r => r.aqi_num));
-  const pm25Mean = safeMean(filteredRows.map(r => r.aqi_pm25_num));
-  const pm25Max = safeMax(filteredRows.map(r => r.aqi_pm25_num));
+  const aqiVals = filteredRows.map(r => r.aqi_num);
+  const pm25Vals = filteredRows.map(r => r.aqi_pm25_num);
+
+  const aqiMean = safeMean(aqiVals);
+  const aqiMed = safeMedian(aqiVals);
+  const aqiMax = safeMax(aqiVals);
+  const aqiStd = safeStd(aqiVals);
+  const pm25Mean = safeMean(pm25Vals);
+  const pm25Med = safeMedian(pm25Vals);
+  const pm25Max = safeMax(pm25Vals);
+  const pm25P95 = safePercentile(pm25Vals, 95);
   const tHighMean = safeMean(filteredRows.map(r => r.temp_high_c));
   const tLowMean  = safeMean(filteredRows.map(r => r.temp_low_c));
 
@@ -991,11 +1300,14 @@ function renderKPIs(){
     return days ? (miss / days) : 0;
   };
 
+  const sdsCount = detectedSDSEvents ? detectedSDSEvents.length : 0;
+
   const cards = [
-    {t:"范围", v:`${start} → ${end}`, s:`${days} 天`},
-    {t:"AQI 平均 / 最高", v:`${fmt(aqiMean,1)} / ${fmt(aqiMax,0)}`, s:`缺失率 ${fmt(missRate("aqi_num")*100,1)}%`},
-    {t:"PM2.5 平均 / 最高", v:`${fmt(pm25Mean,1)} / ${fmt(pm25Max,0)}`, s:`缺失率 ${fmt(missRate("aqi_pm25_num")*100,1)}%`},
+    {t:"范围", v:`${start} → ${end}`, s:`${days} 条记录`},
+    {t:"AQI Mean / Median / Max", v:`${fmt(aqiMean,1)} / ${fmt(aqiMed,1)} / ${fmt(aqiMax,0)}`, s:`Std=${fmt(aqiStd,1)} · 缺失${fmt(missRate("aqi_num")*100,1)}%`},
+    {t:"PM2.5 Mean / Median / P95", v:`${fmt(pm25Mean,1)} / ${fmt(pm25Med,1)} / ${fmt(pm25P95,1)}`, s:`Max=${fmt(pm25Max,0)} · 缺失${fmt(missRate("aqi_pm25_num")*100,1)}%`},
     {t:"温度(高/低)均值", v:`${fmt(tHighMean,1)} / ${fmt(tLowMean,1)} ℃`, s:`基于 temp_high_c / temp_low_c`},
+    {t:"🌪️ 沙尘事件 / SDS Events", v:`${sdsCount} 个事件`, s:`PM10>150 & ratio>2 & coarse>75`},
   ];
 
   for(const c of cards){
@@ -1085,22 +1397,52 @@ function plotWeatherDist(){
   }, {displayModeBar:false, responsive:true});
 }
 
+function computeMovingAvg(vals, window){
+  const out = [];
+  for(let i=0; i<vals.length; i++){
+    let sum=0, cnt=0;
+    for(let j=Math.max(0,i-window+1); j<=i; j++){
+      if(vals[j]!==null && !isNaN(vals[j])){ sum+=vals[j]; cnt++; }
+    }
+    out.push(cnt>0 ? sum/cnt : null);
+  }
+  return out;
+}
+
+function getSDSEventShapes(){
+  if(!detectedSDSEvents || detectedSDSEvents.length===0) return [];
+  return detectedSDSEvents.map(ev=>({
+    type:'rect', xref:'x', yref:'paper', x0:ev.start, x1:ev.end, y0:0, y1:1,
+    fillcolor:'rgba(239,68,68,0.12)', line:{width:0},
+    layer:'below'
+  }));
+}
+
 function plotAQI(){
   const tsName = timestepSelect.options[timestepSelect.selectedIndex]?.text || "日";
   const x = aggRows.map(r => r.dateISO);
   const aqi = aggRows.map(r => r.aqi_num);
   const pm25 = aggRows.map(r => r.aqi_pm25_num);
   
-  // Dynamic threshold: show ALL points for ≤10k rows, downsample only for truly massive sets
   const THRESHOLD = x.length <= 10000 ? x.length : 5000;
   const dsAqi = downsampleLTTB(x, aqi, THRESHOLD);
   const dsPm25 = downsampleLTTB(x, pm25, THRESHOLD);
 
-  Plotly.newPlot("chartAQI", [
+  const traces = [
     {type:"scattergl", mode:"lines", name:"AQI", x:dsAqi.x, y: dsAqi.y, connectgaps:false, hovertemplate:"%{x}<br>AQI=%{y:.2f}<extra></extra>", line:{color:"#3b82f6", width:2}},
     {type:"scattergl", mode:"lines", name:"PM2.5", x:dsPm25.x, y: dsPm25.y, connectgaps:false, yaxis:"y2", hovertemplate:"%{x}<br>PM2.5=%{y:.2f}<extra></extra>", line:{color:"#eab308", width:2}},
-  ],{
-    title:{text:`AQI & PM2.5（${tsName}）`, font:{size:12, color:"#64748b"}, x:0},
+  ];
+
+  // Moving averages (only when enough data)
+  if(dsAqi.x.length > 30){
+    const ma7 = computeMovingAvg(dsAqi.y, 7);
+    const ma30 = computeMovingAvg(dsAqi.y, 30);
+    traces.push({type:"scattergl", mode:"lines", name:"AQI 7d MA", x:dsAqi.x, y:ma7, connectgaps:false, line:{color:"#8b5cf6", width:2, dash:"dot"}, opacity:0.7});
+    traces.push({type:"scattergl", mode:"lines", name:"AQI 30d MA", x:dsAqi.x, y:ma30, connectgaps:false, line:{color:"#ec4899", width:2, dash:"dash"}, opacity:0.7});
+  }
+
+  Plotly.newPlot("chartAQI", traces, {
+    title:{text:`AQI & PM2.5（${tsName}）— 红色阴影=检测到的沙尘事件`, font:{size:12, color:"#64748b"}, x:0},
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:50,r:45,t:36,b:40},
@@ -1108,7 +1450,8 @@ function plotAQI(){
     yaxis:{title:"AQI", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", rangemode:"tozero"},
     yaxis2:{title:"PM2.5", overlaying:"y", side:"right", tickfont:{color:"#64748b"}, rangemode:"tozero"},
     font:{color:"#334155"},
-    legend:{orientation:"h", y:-0.25}
+    legend:{orientation:"h", y:-0.25},
+    shapes: getSDSEventShapes()
   }, {displayModeBar:false, responsive:true});
 }
 
@@ -1167,14 +1510,15 @@ function plotPollutants(){
   });
 
   Plotly.newPlot("chartPollutants", series, {
-    title:{text:`污染物全量（${tsName}）`, font:{size:12, color:"#64748b"}, x:0},
+    title:{text:`污染物全量（${tsName}）— 红色阴影=沙尘事件`, font:{size:12, color:"#64748b"}, x:0},
     paper_bgcolor:"rgba(0,0,0,0)",
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:50,r:10,t:36,b:40},
     xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
     yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", type: "log", title: "浓度 (Log scale)"},
     font:{color:"#334155"},
-    legend:{orientation:"h", y:-0.22}
+    legend:{orientation:"h", y:-0.22},
+    shapes: getSDSEventShapes()
   }, {displayModeBar:false, responsive:true});
 }
 
@@ -1524,6 +1868,9 @@ function renderTable(){
 
 /** ====== Refresh all ====== */
 function refreshAll(){
+  // SDS event detection (must run before charts so shapes are available)
+  detectedSDSEvents = detectSDSEvents(filteredRows);
+
   // 月度面板 + KPI
   renderMonthlyPanel();
   renderKPIs();
@@ -1541,6 +1888,13 @@ function refreshAll(){
   safePlot(plotScatterPmRatio, 'ScatterPmRatio');
   safePlot(plotCorr, 'Corr');
 
+  // Statistics tab
+  safePlot(renderEventCatalog, 'EventCatalog');
+  safePlot(renderDescriptiveStats, 'DescStats');
+  safePlot(plotSeasonBoxplots, 'SeasonBox');
+  safePlot(plotYearBoxplots, 'YearBox');
+  safePlot(plotExceedance, 'Exceedance');
+
   // 表格
   renderTable();
 
@@ -1548,7 +1902,8 @@ function refreshAll(){
   const days = filteredRows.length;
   const start = days ? filteredRows[0].__dateISO : "—";
   const end = days ? filteredRows[days-1].__dateISO : "—";
-  metaHint.textContent = `已加载：${rawRows.length} 行；当前筛选：${days} 行（${start} → ${end}），timestep=${timestepSelect.value}${loadedSiteInfo}`;
+  const sdsInfo = detectedSDSEvents.length > 0 ? ` · 🌪️${detectedSDSEvents.length}个沙尘事件` : '';
+  metaHint.textContent = `已加载：${rawRows.length} 行；当前筛选：${days} 行（${start} → ${end}），timestep=${timestepSelect.value}${loadedSiteInfo}${sdsInfo}`;
 }
 
 /** ====== Reusable CSV processing ====== */
