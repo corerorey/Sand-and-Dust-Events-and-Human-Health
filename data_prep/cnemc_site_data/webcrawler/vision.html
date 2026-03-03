@@ -1214,7 +1214,7 @@ function plotSeasonBoxplots(){
   Plotly.newPlot('chartSeasonBox', traces, {
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{l:50,r:10,t:10,b:50},
-    yaxis:{title:'µg/m³', tickfont:{color:'#64748b'}, gridcolor:'#f1f5f9'},
+    yaxis:{title:'µg/m³', tickfont:{color:'#64748b'}, gridcolor:'#f1f5f9', type:'log'},
     xaxis:{tickfont:{color:'#64748b'}},
     font:{color:'#334155'},
     boxmode:'group'
@@ -1239,7 +1239,7 @@ function plotYearBoxplots(){
   Plotly.newPlot('chartYearBox', traces, {
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{l:50,r:10,t:10,b:40},
-    yaxis:{title:'PM10 µg/m³', tickfont:{color:'#64748b'}, gridcolor:'#f1f5f9'},
+    yaxis:{title:'PM10 µg/m³', tickfont:{color:'#64748b'}, gridcolor:'#f1f5f9', type:'log'},
     xaxis:{tickfont:{color:'#64748b'}},
     font:{color:'#334155'},
     showlegend:false
