@@ -1044,7 +1044,7 @@ function safeSkewness(arr){
 let detectedSDSEvents = [];
 
 function detectSDSEvents(rows){
-  // Flag individual rows
+  // Phase 1: Flag individual rows that meet SDS criteria
   const flagged = rows.map(r => {
     const pm10 = r.aqi_pm10_num;
     const pm25 = r.aqi_pm25_num;
@@ -1054,44 +1054,67 @@ function detectSDSEvents(rows){
     return pm10 > 150 && ratio > 2.0 && coarse > 75;
   });
 
-  // Merge consecutive flagged points (gap tolerance = 2)
-  const events = [];
-  let inEvent = false, evStart = -1;
-  let gapCount = 0;
-  const GAP_TOL = 2;
-
+  // Phase 2: Find contiguous flagged segments (no gap tolerance yet)
+  const segments = [];
+  let inSeg = false, segStart = -1;
   for(let i=0; i<rows.length; i++){
     if(flagged[i]){
-      if(!inEvent){ evStart = i; inEvent = true; }
-      gapCount = 0;
-    } else if(inEvent){
-      gapCount++;
-      if(gapCount > GAP_TOL){
-        events.push({startIdx: evStart, endIdx: i - gapCount});
-        inEvent = false;
-      }
+      if(!inSeg){ segStart = i; inSeg = true; }
+    } else if(inSeg){
+      segments.push({s: segStart, e: i-1});
+      inSeg = false;
     }
   }
-  if(inEvent) events.push({startIdx: evStart, endIdx: rows.length-1});
+  if(inSeg) segments.push({s: segStart, e: rows.length-1});
+  if(segments.length === 0) return [];
 
-  // Compute metrics for each event
-  return events.map(ev => {
-    const slice = rows.slice(ev.startIdx, ev.endIdx+1);
+  // Phase 3: Merge segments whose time gap is within tolerance
+  // Auto-detect resolution: hourly (gap ~1h) vs daily (gap ~24h)
+  const parseDate = (iso) => new Date(iso.replace(' ','T'));
+  let isDaily = false;
+  if(rows.length >= 2){
+    const t0 = parseDate(rows[0].__dateISO);
+    const t1 = parseDate(rows[1].__dateISO);
+    isDaily = (t1 - t0) / (1000*60*60) >= 20; // ≥20h between rows → daily
+  }
+  const GAP_HOURS = isDaily ? 48 : 24; // 2 days for daily data, 24h for hourly
+  const merged = [segments[0]];
+  for(let i=1; i<segments.length; i++){
+    const prev = merged[merged.length-1];
+    const prevEnd = parseDate(rows[prev.e].__dateISO);
+    const curStart = parseDate(rows[segments[i].s].__dateISO);
+    const gapMs = curStart - prevEnd;
+    const gapHours = gapMs / (1000*60*60);
+    if(gapHours <= GAP_HOURS){
+      prev.e = segments[i].e; // extend previous event
+    } else {
+      merged.push({...segments[i]});
+    }
+  }
+
+  // Phase 4: Compute metrics for each merged event
+  return merged.map(ev => {
+    const slice = rows.slice(ev.s, ev.e+1);
     const pm10s = slice.map(r=>r.aqi_pm10_num).filter(v=>v!==null);
     const pm25s = slice.map(r=>r.aqi_pm25_num).filter(v=>v!==null);
     const ratios = slice.map(r => (r.aqi_pm25_num && r.aqi_pm10_num) ? r.aqi_pm10_num/r.aqi_pm25_num : null).filter(v=>v!==null);
     const coarses = slice.map(r => (r.aqi_pm10_num!==null && r.aqi_pm25_num!==null) ? r.aqi_pm10_num - r.aqi_pm25_num : null).filter(v=>v!==null);
+    // Duration in hours from actual timestamps
+    const startDate = parseDate(rows[ev.s].__dateISO);
+    const endDate = parseDate(rows[ev.e].__dateISO);
+    const durationHrs = Math.round((endDate - startDate) / (1000*60*60));
     return {
-      start: rows[ev.startIdx].__dateISO,
-      end: rows[ev.endIdx].__dateISO,
-      duration: ev.endIdx - ev.startIdx + 1,
+      start: rows[ev.s].__dateISO,
+      end: rows[ev.e].__dateISO,
+      duration: durationHrs,
+      durationLabel: durationHrs >= 24 ? `${(durationHrs/24).toFixed(1)}d` : `${durationHrs}h`,
       peakPM10: safeMax(pm10s),
       peakPM25: safeMax(pm25s),
       peakRatio: safeMax(ratios),
       meanCoarse: safeMean(coarses),
-      count: slice.length
+      flaggedPoints: pm10s.length
     };
-  }).filter(ev => ev.duration >= 2); // at least 2 consecutive points
+  }).filter(ev => ev.duration >= 2); // at least 2 hours
 }
 
 function renderEventCatalog(){
@@ -1103,13 +1126,14 @@ function renderEventCatalog(){
     return;
   }
   const totalHours = detectedSDSEvents.reduce((a,e)=>a+e.duration,0);
-  summary.innerHTML = `<span class="pill" style="background:#fee2e2;color:#991b1b;border-color:#fecaca;">检测到 <b>${detectedSDSEvents.length}</b> 个沙尘事件，共 <b>${totalHours}</b> 小时/天</span>`;
+  const totalDays = (totalHours/24).toFixed(1);
+  summary.innerHTML = `<span class="pill" style="background:#fee2e2;color:#991b1b;border-color:#fecaca;">检测到 <b>${detectedSDSEvents.length}</b> 个沙尘事件，累计 <b>${totalHours}h (${totalDays}d)</b>（合并间隔≤24h的片段）</span>`;
 
-  const cols = ['#','Start','End','Duration','Peak PM10','Peak PM25','Peak Ratio','Mean Coarse'];
+  const cols = ['#','Start','End','Duration','Flagged Pts','Peak PM10','Peak PM25','Peak Ratio','Mean Coarse'];
   const thead = '<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
   const tbody = '<tbody>'+detectedSDSEvents.map((ev,i)=>`<tr>
-    <td>${i+1}</td><td>${ev.start}</td><td>${ev.end}</td><td>${ev.duration}</td>
-    <td>${fmt(ev.peakPM10,0)}</td><td>${fmt(ev.peakPM25,0)}</td>
+    <td>${i+1}</td><td>${ev.start}</td><td>${ev.end}</td><td>${ev.durationLabel}</td>
+    <td>${ev.flaggedPoints}</td><td>${fmt(ev.peakPM10,0)}</td><td>${fmt(ev.peakPM25,0)}</td>
     <td>${fmt(ev.peakRatio,2)}</td><td>${fmt(ev.meanCoarse,1)}</td>
   </tr>`).join('')+'</tbody>';
   tbl.innerHTML = thead + tbody;
