@@ -311,9 +311,22 @@
     <h2>数据导入与筛选</h2>
     <div class="controls">
       <div class="field">
-        <label>上传 CSV（含列：date, yyyymm, aqi_num, temp_high_c 等）</label>
+        <label>从仓库中选择示例 CSV / Select sample CSV from repository</label>
+        <select id="repoFileSelect">
+          <option value="">— 选择一个文件 / Select a file —</option>
+          <option value="data_prep/cnemc_site_data/1475A_workers_hospital_decommissioned_20181115_20150101_20251231_wide.csv">1475A Workers Hospital (2015–2025)</option>
+          <option value="data_prep/cnemc_site_data/1476A_lanlian_hotel_20150101_20251231_wide.csv">1476A Lanlian Hotel (2015–2025)</option>
+          <option value="data_prep/cnemc_site_data/1477A_yuzhong_lzu_campus_control_20150101_20251231_wide.csv">1477A Yuzhong LZU Campus (2015–2025)</option>
+          <option value="data_prep/cnemc_site_data/1478A_biological_products_institute_20150101_20251231_wide.csv">1478A Biological Products Institute (2015–2025)</option>
+          <option value="data_prep/cnemc_site_data/1479A_railway_design_institute_20150101_20251231_wide.csv">1479A Railway Design Institute (2015–2025)</option>
+          <option value="data_prep/cnemc_site_data/webcrawler/lanzhou_201101_202602.csv">Lanzhou Webcrawler (2011–2026)</option>
+        </select>
+        <button id="loadRepoBtn" type="button">加载 / Load from Repository</button>
+        <div class="hint">Or upload your own CSV file below.</div>
+      </div>
+      <div class="field">
+        <label>上传本地 CSV / Upload local CSV</label>
         <input id="fileInput" type="file" accept=".csv" />
-        <div class="hint">提示：浏览器无法直接读取本地路径文件，必须用上传按钮。</div>
       </div>
 
       <div class="row">
@@ -1538,94 +1551,143 @@ function refreshAll(){
   metaHint.textContent = `已加载：${rawRows.length} 行；当前筛选：${days} 行（${start} → ${end}），timestep=${timestepSelect.value}${loadedSiteInfo}`;
 }
 
-/** ====== Load CSV ====== */
+/** ====== Reusable CSV processing ====== */
+function processCSVData(rows, filename) {
+  if(rows.length === 0){
+    alert("CSV 为空或解析失败");
+    return;
+  }
+
+  // 校验列（用第一行 keys）
+  const v = validateColumns(rows);
+  if(!v.ok){
+    alert(v.msg);
+    return;
+  }
+
+  // 提取文件名中的站点和时间范围信息
+  const match = filename.match(/^(.+)_(\d{8}_\d{8})/);
+  if(match){
+    loadedSiteInfo = ` (文件提取: ${match[1]}, ${match[2]})`;
+  } else {
+    loadedSiteInfo = "";
+  }
+
+  // Reset caches
+  CACHED_MAPPINGS = {};
+  rawRows = rows.map(normalizeRow).filter(r => r.__dateISO);
+
+  // Init Scatter Options based on what's discovered
+  scatterXSelect.innerHTML = "";
+  scatterYSelect.innerHTML = "";
+  NUMERIC_COLS.forEach(c => {
+    scatterXSelect.innerHTML += `<option value="${c}">${c}</option>`;
+    scatterYSelect.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+  scatterYSelect.value = "aqi_num";
+  scatterXSelect.value = "aqi_pm25_num";
+  if (!scatterXSelect.value) scatterXSelect.value = NUMERIC_COLS[1]; // fallback
+
+  // city 下拉
+  const cities = [...new Set(rawRows.map(r => r.__city).filter(Boolean))].sort();
+  citySelect.innerHTML = `<option value="">全部</option>` + cities.map(c=>`<option value="${c}">${c}</option>`).join("");
+  citySelect.disabled = false;
+
+  // 时间范围
+  rawRows.sort((a,b)=>a.__dateISO.localeCompare(b.__dateISO));
+  const minDate = rawRows[0].__dateISO;
+  const maxDate = rawRows[rawRows.length-1].__dateISO;
+  startDateEl.value = minDate;
+  endDateEl.value = maxDate;
+  startDateEl.min = minDate; startDateEl.max = maxDate;
+  endDateEl.min = minDate; endDateEl.max = maxDate;
+  startDateEl.disabled = false;
+  endDateEl.disabled = false;
+
+  // 月份列表（yyyymm）
+  const months = [...new Set(rawRows.map(r => r.__yyyymm).filter(Boolean))].sort();
+  monthSelect.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join("");
+  monthSelect.disabled = false;
+
+  // timestep
+  timestepSelect.disabled = false;
+
+  applyBtn.disabled = false;
+
+  // 默认选择第一城市（如果只有一个）
+  if(cities.length === 1){
+    citySelect.value = cities[0];
+  }
+
+  // 默认选择起始月
+  monthSelect.value = months[0] || "";
+
+  applyFilters();
+}
+
+/** ====== Load CSV from local file ====== */
 fileInput.addEventListener("change", (e)=>{
   const file = e.target.files?.[0];
   if(!file) return;
-
-  // 提取文件名中的站点和时间范围信息
-  const filename = file.name;
-  const match = filename.match(/^(.+)_(\d{8}_\d{8})/);
-  if(match){
-      loadedSiteInfo = ` (文件提取: ${match[1]}, ${match[2]})`;
-  } else {
-      loadedSiteInfo = "";
-  }
 
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
     complete: (res)=>{
-      // 先原始
-      const rows = res.data || [];
-      if(rows.length === 0){
-        alert("CSV 为空或解析失败");
-        return;
-      }
-
-      // 校验列（用第一行 keys）
-      const v = validateColumns(rows);
-      if(!v.ok){
-        alert(v.msg);
-        return;
-      }
-
-      // Reset caches
-      CACHED_MAPPINGS = {};
-      rawRows = rows.map(normalizeRow).filter(r => r.__dateISO);
-
-      // Init Scatter Options based on what's discovered
-      scatterXSelect.innerHTML = "";
-      scatterYSelect.innerHTML = "";
-      NUMERIC_COLS.forEach(c => {
-          scatterXSelect.innerHTML += `<option value="${c}">${c}</option>`;
-          scatterYSelect.innerHTML += `<option value="${c}">${c}</option>`;
-      });
-      scatterYSelect.value = "aqi_num";
-      scatterXSelect.value = "aqi_pm25_num";
-      if (!scatterXSelect.value) scatterXSelect.value = NUMERIC_COLS[1]; // fallback
-
-      // city 下拉
-      const cities = [...new Set(rawRows.map(r => r.__city).filter(Boolean))].sort();
-      citySelect.innerHTML = `<option value="">全部</option>` + cities.map(c=>`<option value="${c}">${c}</option>`).join("");
-      citySelect.disabled = false;
-
-      // 时间范围
-      rawRows.sort((a,b)=>a.__dateISO.localeCompare(b.__dateISO));
-      const minDate = rawRows[0].__dateISO;
-      const maxDate = rawRows[rawRows.length-1].__dateISO;
-      startDateEl.value = minDate;
-      endDateEl.value = maxDate;
-      startDateEl.min = minDate; startDateEl.max = maxDate;
-      endDateEl.min = minDate; endDateEl.max = maxDate;
-      startDateEl.disabled = false;
-      endDateEl.disabled = false;
-
-      // 月份列表（yyyymm）
-      const months = [...new Set(rawRows.map(r => r.__yyyymm).filter(Boolean))].sort();
-      monthSelect.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join("");
-      monthSelect.disabled = false;
-
-      // timestep
-      timestepSelect.disabled = false;
-
-      applyBtn.disabled = false;
-
-      // 默认选择第一城市（如果只有一个）
-      if(cities.length === 1){
-        citySelect.value = cities[0];
-      }
-
-      // 默认选择起始月
-      monthSelect.value = months[0] || "";
-
-      applyFilters();
+      processCSVData(res.data || [], file.name);
     },
     error: (err)=>{
       console.error(err);
       alert("CSV 解析失败，请检查文件格式/编码（建议 UTF-8 或 UTF-8-SIG）");
     }
   });
+});
+
+/** ====== Load CSV from GitHub repository ====== */
+const repoFileSelect = document.getElementById("repoFileSelect");
+const loadRepoBtn = document.getElementById("loadRepoBtn");
+const REPO_RAW_BASE = "https://raw.githubusercontent.com/corerorey/Sand-and-Dust-Events-and-Human-Health/main/";
+
+loadRepoBtn.addEventListener("click", async ()=>{
+  const filePath = repoFileSelect.value;
+  if(!filePath){
+    alert("请先从下拉菜单中选择一个文件 / Please select a file first.");
+    return;
+  }
+
+  const url = REPO_RAW_BASE + filePath;
+  const filename = filePath.split("/").pop();
+
+  loadRepoBtn.disabled = true;
+  loadRepoBtn.textContent = "加载中… / Loading…";
+  metaHint.textContent = `正在从 GitHub 获取 ${filename} …`;
+
+  try {
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const csvText = await resp.text();
+
+    Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (res)=>{
+        processCSVData(res.data || [], filename);
+        loadRepoBtn.disabled = false;
+        loadRepoBtn.textContent = "加载 / Load from Repository";
+      },
+      error: (err)=>{
+        console.error(err);
+        alert("CSV 解析失败 / CSV parsing failed.");
+        loadRepoBtn.disabled = false;
+        loadRepoBtn.textContent = "加载 / Load from Repository";
+      }
+    });
+  } catch(err) {
+    console.error(err);
+    alert(`无法从 GitHub 获取文件: ${err.message}\nFailed to fetch file from GitHub.`);
+    loadRepoBtn.disabled = false;
+    loadRepoBtn.textContent = "加载 / Load from Repository";
+  }
 });
 
 applyBtn.addEventListener("click", ()=>{
