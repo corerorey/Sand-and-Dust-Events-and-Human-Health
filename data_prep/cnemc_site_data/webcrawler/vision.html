@@ -9,6 +9,8 @@
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <!-- PapaParse（解析 CSV） -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- ECharts（入口地图） -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 
   <style>
     :root{
@@ -305,46 +307,49 @@
   </div>
 </header>
 
-<div class="container">
-  <!-- 左侧：控制 + 月度统计 -->
-  <aside class="card">
-    <h2>数据导入与筛选</h2>
-    <div class="controls">
-      <div class="field">
-        <label>从仓库中选择示例 CSV / Select sample CSV from repository</label>
-        <select id="repoFileSelect">
-          <option value="">— 选择一个文件 / Select a file —</option>
-          <optgroup label="兰州市站点 2015–2025（十年完整数据）">
-            <option value="data_prep/cnemc_site_data/1475A_workers_hospital_decommissioned_20181115_20150101_20251231_wide.csv">1475A 工人医院（已停用 2018-11）(2015–2025)</option>
-            <option value="data_prep/cnemc_site_data/1476A_lanlian_hotel_20150101_20251231_wide.csv">1476A 兰炼宾馆 (2015–2025)</option>
-            <option value="data_prep/cnemc_site_data/1477A_yuzhong_lzu_campus_control_20150101_20251231_wide.csv">1477A 榆中/兰大校区对照点 (2015–2025)</option>
-            <option value="data_prep/cnemc_site_data/1478A_biological_products_institute_20150101_20251231_wide.csv">1478A 生物制品所 (2015–2025)</option>
-            <option value="data_prep/cnemc_site_data/1479A_railway_design_institute_20150101_20251231_wide.csv">1479A 铁路设计院 (2015–2025)</option>
-          </optgroup>
-          <optgroup label="兰州市站点 2025-01 — 2026-02（最新数据）">
-            <option value="data_prep/cnemc_site_data/1476A_lanlian_hotel_20250101_20260228_wide.csv">1476A 兰炼宾馆 (2025-01–2026-02)</option>
-            <option value="data_prep/cnemc_site_data/1478A_biological_products_institute_20250101_20260228_wide.csv">1478A 生物制品所 (2025-01–2026-02)</option>
-            <option value="data_prep/cnemc_site_data/1479A_railway_design_institute_20250101_20260228_wide.csv">1479A 铁路设计院 (2025-01–2026-02)</option>
-            <option value="data_prep/cnemc_site_data/3241A_lily_park_20250101_20260228_wide.csv">3241A 百合公园 (2025-01–2026-02)</option>
-            <option value="data_prep/cnemc_site_data/3242A_heping_20250101_20260228_wide.csv">3242A 和平 (2025-01–2026-02)</option>
-            <option value="data_prep/cnemc_site_data/3245A_new_district_management_committee_20250101_20260228_wide.csv">3245A 新区管委会 (2025-01–2026-02)</option>
-            <option value="data_prep/cnemc_site_data/3246A_zhouqu_middle_school_20250101_20260228_wide.csv">3246A 舟曲中学 (2025-01–2026-02)</option>
-          </optgroup>
-          <optgroup label="其他城市站点 / Other Cities">
-            <option value="data_prep/cnemc_site_data/1373A_Nanhai_Meteorological_Bureau_20150101_20260228_wide.csv">1373A 南海气象局 (2015–2026)</option>
-          </optgroup>
-          <optgroup label="其他数据源">
-            <option value="data_prep/cnemc_site_data/webcrawler/lanzhou_201101_202602.csv">兰州网络爬取数据 Lanzhou Webcrawler (2011–2026)</option>
-          </optgroup>
+<div id="entry-view">
+  <div class="container" style="display: grid;"> <!-- Using standard grid: 360px 1fr -->
+    <!-- 左侧边缘：控制栏 -->
+    <aside class="card" style="height: fit-content;">
+      <h2>数据选择 (Data Select)</h2>
+      <div class="field" style="margin-top: 15px;">
+        <label>从地图所选城市列表选择 / Select Site from Map</label>
+        <select id="repoFileSelect" style="margin-bottom: 8px;">
+          <option value="">— 先在右侧地图点击气泡 / Click bubble on map first —</option>
         </select>
-        <button id="loadRepoBtn" type="button">加载 / Load from Repository</button>
-        <div class="hint">Or upload your own CSV file below.</div>
+        <button id="loadRepoBtn" type="button" style="width: 100%;">加载选中数据 / Load Data</button>
       </div>
+      
+      <div style="margin: 20px 0; border-top: 1px dashed var(--line);"></div>
+      
       <div class="field">
-        <label>上传本地 CSV / Upload local CSV</label>
+        <label>或上传本地 CSV / Or Upload Local CSV</label>
         <input id="fileInput" type="file" accept=".csv" />
       </div>
+    </aside>
 
+    <!-- 主视图：地图 -->
+    <main class="card" style="margin-bottom: 20px; padding: 0; position: relative;">
+      <h2 style="padding: 18px 18px 0;">中国监测站点分布 (China Monitoring Sites)</h2>
+      <div id="china-map" style="width: 100%; height: 600px;"></div>
+      
+      <!-- 悬浮站点选择菜单 -->
+      <div id="map-popup-menu" style="display: none; position: absolute; z-index: 100; background: white; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); padding: 10px; width: 280px; max-height: 400px; overflow-y: auto;">
+        <h3 id="popup-title" style="margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid var(--line); padding-bottom: 8px;">选择站点</h3>
+        <div id="popup-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        <button id="popup-close-btn" style="margin-top: 10px; width: 100%; background: var(--line); color: var(--text);">取消 (Cancel)</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="analysis-view" class="container" style="display: none;">
+  <!-- 左侧：控制 + 月度统计 -->
+  <aside class="card">
+    <div style="margin-bottom: 15px;">
+      <button id="backToMapBtn" style="width: 100%; background: #64748b;">← 返回地图首页 (Back to Map)</button>
+    </div>
+    <h2>数据筛选 (Data Filter)</h2>
       <div class="row">
         <div class="field">
           <label>城市（city_slug）</label>
@@ -384,11 +389,9 @@
       </div>
 
       <div class="hint" id="metaHint">尚未加载数据。</div>
-    </div>
+      <div class="divider"></div>
 
-    <div class="divider"></div>
-
-    <h2>月度统计面板（参考网页右侧统计）</h2>
+      <h2>月度统计面板（参考网页右侧统计）</h2>
     <div class="month-box">
       <div class="month-title" id="monthTitle">—</div>
       <div class="statline" id="monthQualityLine"></div>
@@ -558,6 +561,7 @@
         <div class="hint">点击表头可排序（升/降）。</div>
       </div>
     </section>
+  </main>
 </div>
 
 <script>
@@ -2025,7 +2029,16 @@ function processCSVData(rows, filename) {
   monthSelect.value = months[0] || "";
 
   applyFilters();
+  
+  // Transition to analysis view
+  document.getElementById('entry-view').style.display = 'none';
+  document.getElementById('analysis-view').style.display = 'grid'; // because container uses display:grid
 }
+
+document.getElementById('backToMapBtn').addEventListener('click', () => {
+    document.getElementById('analysis-view').style.display = 'none';
+    document.getElementById('entry-view').style.display = 'block';
+});
 
 /** ====== Load CSV from local file ====== */
 fileInput.addEventListener("change", (e)=>{
@@ -2090,6 +2103,199 @@ loadRepoBtn.addEventListener("click", async ()=>{
     loadRepoBtn.disabled = false;
     loadRepoBtn.textContent = "加载 / Load from Repository";
   }
+});
+
+/** ====== ECharts Map Implementation ====== */
+async function initChinaMap() {
+    const chartDom = document.getElementById('china-map');
+    const myChart = echarts.init(chartDom);
+    myChart.showLoading();
+
+    try {
+        // Fetch geojson from a reliable CDN (Aliyun DataV) since raw.githubusercontent.com is often blocked in China
+        // This geojson standard includes 34 provinces & proper boundaries
+        const geoResp = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+        const geoJSON = await geoResp.json();
+        echarts.registerMap('china', geoJSON);
+        
+        // Exact site coordinates explicitly requested or derived
+        const sitesList = [
+             { code: "1475A", name: "工人医院", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1475A_workers_hospital_decommissioned_20181115_20150101_20251231_wide.csv", range: "2015-2025" },
+             { code: "1476A", name: "兰炼宾馆", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1476A_lanlian_hotel_20150101_20251231_wide.csv", range: "2015-2025" },
+             { code: "1476A", name: "兰炼宾馆", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1476A_lanlian_hotel_20250101_20260228_wide.csv", range: "2025-2026" },
+             { code: "1477A", name: "榆中校区", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1477A_yuzhong_lzu_campus_control_20150101_20251231_wide.csv", range: "2015-2025" },
+             { code: "1478A", name: "生物制品所", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1478A_biological_products_institute_20150101_20251231_wide.csv", range: "2015-2025" },
+             { code: "1478A", name: "生物制品所", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1478A_biological_products_institute_20250101_20260228_wide.csv", range: "2025-2026" },
+             { code: "1479A", name: "铁路设计院", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1479A_railway_design_institute_20150101_20251231_wide.csv", range: "2015-2025" },
+             { code: "1479A", name: "铁路设计院", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/1479A_railway_design_institute_20250101_20260228_wide.csv", range: "2025-2026" },
+             { code: "3241A", name: "百合公园", city: "兰州", lng: 103.7439, lat: 36.0842, file: "data_prep/cnemc_site_data/3241A_lily_park_20250101_20260228_wide.csv", range: "2025-2026" },
+             { code: "3242A", name: "和平", city: "兰州", lng: 103.9611, lat: 35.998, file: "data_prep/cnemc_site_data/3242A_heping_20250101_20260228_wide.csv", range: "2025-2026" },
+             { code: "3245A", name: "新区管委会", city: "兰州新区", lng: 103.6633, lat: 36.533, file: "data_prep/cnemc_site_data/3245A_new_district_management_committee_20250101_20260228_wide.csv", range: "2025-2026" },
+             { code: "3246A", name: "舟曲中学", city: "兰州新区", lng: 103.6975, lat: 36.4789, file: "data_prep/cnemc_site_data/3246A_zhouqu_middle_school_20250101_20260228_wide.csv", range: "2025-2026" },
+             { code: "1373A", name: "南海气象局", city: "佛山南海", lng: 113.1227, lat: 23.0288, file: "data_prep/cnemc_site_data/1373A_Nanhai_Meteorological_Bureau_20150101_20260228_wide.csv", range: "2015-2026" },
+             { code: "网抓", name: "兰州爬取数据", city: "兰州", lng: 103.8236, lat: 36.058, file: "data_prep/cnemc_site_data/webcrawler/lanzhou_201101_202602.csv", range: "2011-2026" }
+        ];
+
+        // Group by City strictly to prevent map clutter. One bubble per city.
+        const markerMap = {};
+        sitesList.forEach(s => {
+             const key = s.city;
+             if (!markerMap[key]) markerMap[key] = {
+                  name: s.city,
+                  lng: s.lng,  // uses the first site's coord as the city's representative coord
+                  lat: s.lat,
+                  sites: []
+             };
+             markerMap[key].sites.push({
+                   label: `${s.code} ${s.name} (${s.range})`,
+                   file: s.file
+             });
+        });
+
+        const scatterData = Object.values(markerMap).map(m => ({
+             name: m.name,
+             value: [m.lng, m.lat],
+             sites: m.sites
+        }));
+
+        const option = {
+            backgroundColor: '#f8fafc',
+            title: {
+                text: 'China Monitoring Sites',
+                subtext: 'Click a bubble to select site',
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: function (params) {
+                    const data = params.data;
+                    if (!data) return params.name;
+                    return `<b>${data.name}</b><br/>共 ${data.sites.length} 个站点可选。单击选择。`;
+                }
+            },
+            geo: {
+                map: 'china',
+                roam: true,
+                scaleLimit: {
+                    min: 1,
+                    max: 5
+                },
+                itemStyle: {
+                    areaColor: '#e2e8f0',
+                    borderColor: '#94a3b8'
+                },
+                emphasis: {
+                    itemStyle: {
+                        areaColor: '#cbd5e1'
+                    },
+                    label: { show: false }
+                },
+                // Adjust layout to leave room for SCS inset if desired
+                layoutCenter: ['105%', '50%'],
+                layoutSize: '100%'
+            },
+            series: [
+                {
+                    name: '站点',
+                    type: 'effectScatter',
+                    coordinateSystem: 'geo',
+                    data: scatterData,
+                    symbolSize: 12,
+                    showEffectOn: 'render',
+                    rippleEffect: {
+                        brushType: 'stroke'
+                    },
+                    label: {
+                        formatter: '{b}',
+                        position: 'right',
+                        show: true,
+                        fontSize: 14,
+                        color: '#1e293b',
+                        fontWeight: 'bold',
+                        textBorderColor: 'white',
+                        textBorderWidth: 2
+                    },
+                    itemStyle: {
+                        color: '#ef4444',
+                        shadowBlur: 10,
+                        shadowColor: '#ef4444'
+                    },
+                    zlevel: 1
+                }
+            ]
+        };
+
+        myChart.hideLoading();
+        myChart.setOption(option);
+        
+        // Click Event on Scatter Bubbles to show contextual absolute popup list
+        myChart.on('click', function(params) {
+             if (params.componentType === 'series') {
+                  const cityData = params.data;
+                  if (cityData && cityData.sites) {
+                      // Retrieve pixel coordinates for where to show the popup box
+                      const pixelPos = myChart.convertToPixel('geo', [cityData.value[0], cityData.value[1]]);
+                      
+                      const popupMenu = document.getElementById('map-popup-menu');
+                      const popupList = document.getElementById('popup-list');
+                      document.getElementById('popup-title').textContent = cityData.name;
+                      
+                      popupList.innerHTML = '';
+                      // Handle single site click instantly skipping the modal
+                      if (cityData.sites.length === 1) {
+                           const selectEl = document.getElementById("repoFileSelect");
+                           selectEl.innerHTML = `<option value="${cityData.sites[0].file}">${cityData.sites[0].label}</option>`;
+                           selectEl.value = cityData.sites[0].file;
+                           document.getElementById('loadRepoBtn').click();
+                           return; // Do not show popup
+                      }
+                      
+                      // For multiple sites at this point, show popup inline on the map
+                      cityData.sites.forEach(site => {
+                           const b = document.createElement('button');
+                           b.textContent = site.label;
+                           b.className = 'site-list-btn'; // We can inline style it below
+                           b.style.cssText = 'padding:8px; background:var(--bg); border:1px solid var(--line); border-radius:4px; cursor:pointer; text-align:left; font-size:12px; color:var(--text); transition:all 0.15s;';
+                           b.onmouseover = () => b.style.borderColor = 'var(--accent)';
+                           b.onmouseout = () => b.style.borderColor = 'var(--line)';
+                           
+                           b.onclick = () => {
+                                popupMenu.style.display = 'none';
+                                const selectEl = document.getElementById("repoFileSelect");
+                                selectEl.innerHTML = `<option value="${site.file}">${site.label}</option>`;
+                                selectEl.value = site.file;
+                                document.getElementById('loadRepoBtn').click();
+                           };
+                           popupList.appendChild(b);
+                      });
+                      
+                      // Position popup (prevent bounds overflow roughly)
+                      popupMenu.style.display = 'block';
+                      popupMenu.style.left = Math.min(pixelPos[0] + 10, chartDom.clientWidth - 300) + 'px';
+                      popupMenu.style.top = Math.max(10, Math.min(pixelPos[1] + 10, chartDom.clientHeight - popupMenu.clientHeight - 10)) + 'px';
+                  }
+             }
+        });
+        
+        document.getElementById('popup-close-btn').addEventListener('click', () => {
+             document.getElementById('map-popup-menu').style.display = 'none';
+        });
+        
+        // Window Resize
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+
+    } catch (e) {
+        myChart.hideLoading();
+        console.error("Failed to load map data.", e);
+        document.getElementById('china-map').innerHTML = "<div style='padding:20px;color:red;'>无法加载底图或坐标文件，请检查网络连接或确保已经 push 至 GitHub。</div>";
+    }
+}
+
+// Initalize on dom load
+document.addEventListener("DOMContentLoaded", () => {
+    initChinaMap();
 });
 
 applyBtn.addEventListener("click", ()=>{
