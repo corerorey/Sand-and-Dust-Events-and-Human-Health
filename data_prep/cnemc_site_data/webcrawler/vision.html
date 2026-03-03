@@ -2112,8 +2112,8 @@ async function initChinaMap() {
     myChart.showLoading();
 
     try {
-        // Fetch geojson from github directly (User specified exact file to use)
-        const geoResp = await fetch('https://raw.githubusercontent.com/corerorey/Sand-and-Dust-Events-and-Human-Health/main/data_prep/mapbase/geoBoundaries-CHN-ADM1-all/geoBoundaries-CHN-ADM1.geojson');
+        // Fetch geojson from relative path to avoid CORS and raw.githubusercontent.com blockages entirely
+        const geoResp = await fetch('../../mapbase/geoBoundaries-CHN-ADM1-all/geoBoundaries-CHN-ADM1.geojson');
         const geoJSON = await geoResp.json();
         echarts.registerMap('china', geoJSON);
         
