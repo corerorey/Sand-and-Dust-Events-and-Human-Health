@@ -5,8 +5,8 @@ import pandas as pd
 
 DEFAULT_INPUT_ROOT = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SCAN_ROOT = r"C:\DOCUMENTO"
-DEFAULT_OUTPUT_START = "2015-01-01 00:00:00"
-DEFAULT_OUTPUT_END = "2025-12-31 23:00:00"
+DEFAULT_OUTPUT_START = "2025-01-01 00:00:00"
+DEFAULT_OUTPUT_END = "2026-02-28 23:00:00"
 
 # IDE-friendly runtime config:
 # 1) click Run
@@ -357,7 +357,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-plot_site_id = "1477A"
+plot_site_id = "3241A"
 plot_output_start, plot_output_end = validate_output_range(OUTPUT_START, OUTPUT_END)
 plot_output_tag = LAST_OUTPUT_TAG or f"{plot_output_start:%Y%m%d}_{plot_output_end:%Y%m%d}"
 folder = OUTPUT_DIR
@@ -370,8 +370,8 @@ df = pd.read_csv(site_file)
 df["date"] = pd.to_datetime(df["date"].astype(str), format="%Y%m%d")
 df["datetime"] = df["date"] + pd.to_timedelta(df["hour"], unit="h")
 
-start = pd.Timestamp("2015-01-01 00:00:00")
-end = pd.Timestamp("2025-12-31 23:00:00")
+start = pd.Timestamp("2025-01-01 00:00:00")
+end = pd.Timestamp("2026-02-28 23:00:00")
 plot_df = df[(df["datetime"] >= start) & (df["datetime"] <= end)].copy()
 
 metrics = ["AQI", "PM2.5", "PM10", "NO2", "SO2", "O3", "CO"]
@@ -394,7 +394,7 @@ plt.figure(figsize=(16, 6))
 for metric in metrics:
     plt.plot(plot_df["datetime"], plot_df[metric], label=metric, linewidth=1.5)
 
-plt.title("1477A Hourly Metrics (2015-01-01 to 2025-12-31)")
+plt.title("3241A Hourly Metrics (2025-01-01 to 2026-02-28)")
 plt.xlabel("Datetime")
 plt.ylabel("Value")
 plt.legend(ncol=4)

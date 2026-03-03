@@ -314,12 +314,25 @@
         <label>从仓库中选择示例 CSV / Select sample CSV from repository</label>
         <select id="repoFileSelect">
           <option value="">— 选择一个文件 / Select a file —</option>
-          <option value="data_prep/cnemc_site_data/1475A_workers_hospital_decommissioned_20181115_20150101_20251231_wide.csv">1475A Workers Hospital (2015–2025)</option>
-          <option value="data_prep/cnemc_site_data/1476A_lanlian_hotel_20150101_20251231_wide.csv">1476A Lanlian Hotel (2015–2025)</option>
-          <option value="data_prep/cnemc_site_data/1477A_yuzhong_lzu_campus_control_20150101_20251231_wide.csv">1477A Yuzhong LZU Campus (2015–2025)</option>
-          <option value="data_prep/cnemc_site_data/1478A_biological_products_institute_20150101_20251231_wide.csv">1478A Biological Products Institute (2015–2025)</option>
-          <option value="data_prep/cnemc_site_data/1479A_railway_design_institute_20150101_20251231_wide.csv">1479A Railway Design Institute (2015–2025)</option>
-          <option value="data_prep/cnemc_site_data/webcrawler/lanzhou_201101_202602.csv">Lanzhou Webcrawler (2011–2026)</option>
+          <optgroup label="兰州市站点 2015–2025（十年完整数据）">
+            <option value="data_prep/cnemc_site_data/1475A_workers_hospital_decommissioned_20181115_20150101_20251231_wide.csv">1475A 工人医院（已停用 2018-11）(2015–2025)</option>
+            <option value="data_prep/cnemc_site_data/1476A_lanlian_hotel_20150101_20251231_wide.csv">1476A 兰炼宾馆 (2015–2025)</option>
+            <option value="data_prep/cnemc_site_data/1477A_yuzhong_lzu_campus_control_20150101_20251231_wide.csv">1477A 榆中/兰大校区对照点 (2015–2025)</option>
+            <option value="data_prep/cnemc_site_data/1478A_biological_products_institute_20150101_20251231_wide.csv">1478A 生物制品所 (2015–2025)</option>
+            <option value="data_prep/cnemc_site_data/1479A_railway_design_institute_20150101_20251231_wide.csv">1479A 铁路设计院 (2015–2025)</option>
+          </optgroup>
+          <optgroup label="兰州市站点 2025-01 — 2026-02（最新数据）">
+            <option value="data_prep/cnemc_site_data/1476A_lanlian_hotel_20250101_20260228_wide.csv">1476A 兰炼宾馆 (2025-01–2026-02)</option>
+            <option value="data_prep/cnemc_site_data/1478A_biological_products_institute_20250101_20260228_wide.csv">1478A 生物制品所 (2025-01–2026-02)</option>
+            <option value="data_prep/cnemc_site_data/1479A_railway_design_institute_20250101_20260228_wide.csv">1479A 铁路设计院 (2025-01–2026-02)</option>
+            <option value="data_prep/cnemc_site_data/3241A_lily_park_20250101_20260228_wide.csv">3241A 百合公园 (2025-01–2026-02)</option>
+            <option value="data_prep/cnemc_site_data/3242A_heping_20250101_20260228_wide.csv">3242A 和平 (2025-01–2026-02)</option>
+            <option value="data_prep/cnemc_site_data/3245A_new_district_management_committee_20250101_20260228_wide.csv">3245A 新区管委会 (2025-01–2026-02)</option>
+            <option value="data_prep/cnemc_site_data/3246A_zhouqu_middle_school_20250101_20260228_wide.csv">3246A 舟曲中学 (2025-01–2026-02)</option>
+          </optgroup>
+          <optgroup label="其他数据源">
+            <option value="data_prep/cnemc_site_data/webcrawler/lanzhou_201101_202602.csv">兰州网络爬取数据 Lanzhou Webcrawler (2011–2026)</option>
+          </optgroup>
         </select>
         <button id="loadRepoBtn" type="button">加载 / Load from Repository</button>
         <div class="hint">Or upload your own CSV file below.</div>
