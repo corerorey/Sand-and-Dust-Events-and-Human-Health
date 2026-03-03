@@ -2112,9 +2112,8 @@ async function initChinaMap() {
     myChart.showLoading();
 
     try {
-        // Fetch geojson from a reliable CDN (Aliyun DataV) since raw.githubusercontent.com is often blocked in China
-        // This geojson standard includes 34 provinces & proper boundaries
-        const geoResp = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+        // Fetch geojson from github directly (User specified exact file to use)
+        const geoResp = await fetch('https://raw.githubusercontent.com/corerorey/Sand-and-Dust-Events-and-Human-Health/main/data_prep/mapbase/geoBoundaries-CHN-ADM1-all/geoBoundaries-CHN-ADM1.geojson');
         const geoJSON = await geoResp.json();
         echarts.registerMap('china', geoJSON);
         
