@@ -1,4 +1,4 @@
-# Sand-and-Dust-Storms-and-Human-Health
+# Sand-and-Dust-Events-and-Human-Health
 
 **A methodological playbook for event-based exposure engineering, epidemiological/causal analysis, and ML-driven decision support for sand and dust storm (SDS) health risks.**
 
