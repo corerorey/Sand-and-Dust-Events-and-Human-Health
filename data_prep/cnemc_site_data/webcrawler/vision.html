@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>空气质量与气象生态数据集可视化分析仪表盘</title>
+  <title>空气质量多源数据集综合分析 — Air Quality Multi-Source Dataset Analysis</title>
 
   <!-- Plotly（画图） -->
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -30,7 +30,7 @@
     *{box-sizing:border-box}
     body{
       margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial;
+      font-family: Georgia, "Palatino Linotype", "Book Antiqua", Palatino, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans", serif;
       background: radial-gradient(circle at top right, rgba(59,130,246,0.08), transparent 40%),
                   radial-gradient(circle at bottom left, rgba(168,85,247,0.08), transparent 40%),
                   var(--bg);
@@ -298,10 +298,10 @@
 
 <body>
 <header>
-  <h1>空气质量与气象生态数据集可视化分析仪表盘</h1>
+  <h1>空气质量多源数据集综合分析</h1>
   <div class="sub">
-    上传你爬取导出的 CSV，即可自动生成：月度统计（优/良/污染天数、AQI/PM2.5 极值）、时间序列、污染物全套、天气/风分布、AQI 与温度/PM2.5 关系、相关性热力图、数据表。<br/>
-    支持 timestep 聚合（日 / 周 / 月），所有图表同步切换。
+    Air Quality Multi-Source Dataset Analysis — 上传 CSV 即可自动生成：沙尘事件识别（SDS Detection）、描述性统计、污染物时间序列、相关性热力图、WHO/国标超标率等。<br/>
+    支持 timestep 聚合（日 / 周 / 月），所有图表同步切换。PM 浓度单位：µg/m³，CO 浓度：mg/m³。
   </div>
 </header>
 
@@ -1161,10 +1161,17 @@ function renderDescriptiveStats(){
     };
   });
 
-  const hdr = ['Variable','Count','Mean','Std','Min','Q1','Median','Q3','Max','Skew'];
+  // Unit mapping for scientific accuracy
+  const UNIT_MAP = {
+    'aqi_num':'(AQI)', 'aqi_pm25_num':'(µg/m³)', 'aqi_pm10_num':'(µg/m³)',
+    'aqi_no2_num':'(µg/m³)', 'aqi_so2_num':'(µg/m³)', 'aqi_o3_num':'(µg/m³)',
+    'aqi_co_num':'(mg/m³)', 'aqi_rank_num':'(rank)', 'temp_high_c':'(℃)', 'temp_low_c':'(℃)'
+  };
+
+  const hdr = ['Variable','Unit','Count','Mean','σ','Min','Q₁','Median','Q₃','Max','Skew'];
   const thead = '<thead><tr>'+hdr.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
   const tbody = '<tbody>'+stats.map(s=>`<tr>
-    <td><b>${s.col}</b></td><td>${s.count}</td><td>${fmt(s.mean,2)}</td><td>${fmt(s.std,2)}</td>
+    <td><b>${s.col}</b></td><td>${UNIT_MAP[s.col]||''}</td><td>${s.count}</td><td>${fmt(s.mean,2)}</td><td>${fmt(s.std,2)}</td>
     <td>${fmt(s.min,2)}</td><td>${fmt(s.q1,2)}</td><td>${fmt(s.median,2)}</td>
     <td>${fmt(s.q3,2)}</td><td>${fmt(s.max,2)}</td><td>${fmt(s.skew,2)}</td>
   </tr>`).join('')+'</tbody>';
@@ -1327,11 +1334,11 @@ function renderKPIs(){
   const sdsCount = detectedSDSEvents ? detectedSDSEvents.length : 0;
 
   const cards = [
-    {t:"范围", v:`${start} → ${end}`, s:`${days} 条记录`},
-    {t:"AQI Mean / Median / Max", v:`${fmt(aqiMean,1)} / ${fmt(aqiMed,1)} / ${fmt(aqiMax,0)}`, s:`Std=${fmt(aqiStd,1)} · 缺失${fmt(missRate("aqi_num")*100,1)}%`},
-    {t:"PM2.5 Mean / Median / P95", v:`${fmt(pm25Mean,1)} / ${fmt(pm25Med,1)} / ${fmt(pm25P95,1)}`, s:`Max=${fmt(pm25Max,0)} · 缺失${fmt(missRate("aqi_pm25_num")*100,1)}%`},
-    {t:"温度(高/低)均值", v:`${fmt(tHighMean,1)} / ${fmt(tLowMean,1)} ℃`, s:`基于 temp_high_c / temp_low_c`},
-    {t:"🌪️ 沙尘事件 / SDS Events", v:`${sdsCount} 个事件`, s:`PM10>150 & ratio>2 & coarse>75`},
+    {t:"范围 / Period", v:`${start} → ${end}`, s:`${days} 条记录 (records)`},
+    {t:"AQI Mean / Median / Max", v:`${fmt(aqiMean,1)} / ${fmt(aqiMed,1)} / ${fmt(aqiMax,0)}`, s:`σ=${fmt(aqiStd,1)} · Missing ${fmt(missRate("aqi_num")*100,1)}%`},
+    {t:"PM₂.₅ Mean / Median / P95 (µg/m³)", v:`${fmt(pm25Mean,1)} / ${fmt(pm25Med,1)} / ${fmt(pm25P95,1)}`, s:`Max=${fmt(pm25Max,0)} µg/m³ · Missing ${fmt(missRate("aqi_pm25_num")*100,1)}%`},
+    {t:"气温均值 / Temp Mean (℃)", v:`${fmt(tHighMean,1)} / ${fmt(tLowMean,1)}`, s:`High / Low · temp_high_c / temp_low_c`},
+    {t:"🌪️ SDS Events", v:`${sdsCount} events`, s:`PM₁₀>150 µg/m³ · PM₁₀/PM₂.₅>2 · Coarse>75 µg/m³`},
   ];
 
   for(const c of cards){
@@ -1471,8 +1478,8 @@ function plotAQI(){
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:50,r:45,t:36,b:40},
     xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
-    yaxis:{title:"AQI", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", rangemode:"tozero"},
-    yaxis2:{title:"PM2.5", overlaying:"y", side:"right", tickfont:{color:"#64748b"}, rangemode:"tozero"},
+    yaxis:{title:"AQI (index)", tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", rangemode:"tozero"},
+    yaxis2:{title:"PM2.5 (µg/m³)", overlaying:"y", side:"right", tickfont:{color:"#64748b"}, rangemode:"tozero"},
     font:{color:"#334155"},
     legend:{orientation:"h", y:-0.25},
     shapes: getSDSEventShapes()
@@ -1539,7 +1546,7 @@ function plotPollutants(){
     plot_bgcolor:"rgba(0,0,0,0)",
     margin:{l:50,r:10,t:36,b:40},
     xaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9"},
-    yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", type: "log", title: "浓度 (Log scale)"},
+    yaxis:{tickfont:{color:"#64748b"}, gridcolor:"#f1f5f9", type: "log", title: "µg/m³ (Log scale, CO: mg/m³)"},
     font:{color:"#334155"},
     legend:{orientation:"h", y:-0.22},
     shapes: getSDSEventShapes()
