@@ -23,12 +23,12 @@ SITE_ALIAS = {
     # "1477A": "yuzhong_lzu_campus_control",
     # "1478A": "biological_products_institute",
     # "1479A": "railway_design_institute",
-    # "3186A": "education_port",
-    # "3241A": "lily_park",
-    # "3242A": "heping",
-    # "3245A": "new_district_management_committee",
-    # "3246A": "zhouqu_middle_school",
-    "1373A": "Nanhai_Meteorological_Bureau",
+    "3186A": "education_port",
+    "3241A": "lily_park",
+    "3242A": "heping",
+    "3245A": "new_district_management_committee",
+    "3246A": "zhouqu_middle_school",
+    # "1373A": "Nanhai_Meteorological_Bureau",
 }
 
 # Scientific-conservative interpolation rule:
@@ -216,9 +216,24 @@ def process_site(site_id, site_alias, frames, full_index, output_dir, output_tag
         print(f"Skip {site_id}: datetime is empty after cleanup")
         return
 
+    # Find the actual date range of valid data BEFORE expanding to full_index
+    value_cols_temp = [c for c in wide_df.columns if c not in ["datetime", "date", "hour"]]
+    valid_rows = wide_df.dropna(subset=value_cols_temp, how="all")
+    
+    if valid_rows.empty:
+        print(f"Skip {site_id}: no valid data rows found in entire range")
+        return
+        
+    actual_start = valid_rows["datetime"].min().floor("D")
+    actual_end = valid_rows["datetime"].max().ceil("D")
+    
+    # Create a site-specific index and output tag based on actual data bounds
+    site_index = pd.date_range(start=actual_start, end=actual_end, freq="h")
+    site_output_tag = f"{actual_start:%Y%m%d}_{actual_end:%Y%m%d}"
+
     wide_df = (
         wide_df.set_index("datetime")
-        .reindex(full_index)
+        .reindex(site_index)
         .rename_axis("datetime")
         .reset_index()
     )
@@ -258,7 +273,7 @@ def process_site(site_id, site_alias, frames, full_index, output_dir, output_tag
         print(f"Skip {site_id}: all value columns are NaN after invalidation/interpolation, no CSV output")
         return
 
-    output_name = f"{site_id}_{site_alias[site_id]}_{output_tag}_wide.csv"
+    output_name = f"{site_id}_{site_alias[site_id]}_{site_output_tag}_wide.csv"
     output_path = os.path.join(output_dir, output_name)
     wide_df.to_csv(output_path, index=False, encoding="utf-8-sig")
 
@@ -307,16 +322,7 @@ def main():
         )
         return
 
-    reference_file = daily_files[0]
-    header_cols = pd.read_csv(reference_file, nrows=0).columns
-    target_sites = [site_id for site_id in SITE_ALIAS if site_id in header_cols]
-    missing_sites = [site_id for site_id in SITE_ALIAS if site_id not in header_cols]
-
-    if missing_sites:
-        print("Missing site columns in reference file:", missing_sites)
-    if not target_sites:
-        print(f"No target sites found in reference file: {reference_file}")
-        return
+    target_sites = list(SITE_ALIAS.keys())
 
     site_frames = {site_id: [] for site_id in target_sites}
     base_cols = ["date", "hour", "type"]
@@ -340,6 +346,10 @@ def main():
 
     os.makedirs(output_dir, exist_ok=True)
     for site_id in target_sites:
+        if not site_frames[site_id]:
+           print(f"Skip {site_id}: no data blocks found in CSVs for this site")
+           continue
+           
         process_site(
             site_id=site_id,
             site_alias=SITE_ALIAS,
