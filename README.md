@@ -157,7 +157,7 @@ We formalize a general mapping:
 - **Outputs (Y):** health outcomes (counts/rates, binary events, time-to-event), possibly subgroup-specific.
 - **Constraints:** confounding, measurement error, lagged effects, spatial misalignment, non-stationarity.
 
-### 1.2 Event-first philosophy
+### 1.2 Event Analysis
 
 To improve comparability across studies and support downstream health models, we recommend an **event-first** workflow:
 
