@@ -3,7 +3,10 @@ import numpy as np
 
 def run_meta_analysis(site_results):
     """
-    Run a random-effects meta analysis across city-specific log(RR) estimations.
+    [NOTE] Backup Module for Future Expansion (Phase 4+)
+    Currently, the project focuses purely on Lanzhou.
+    If the health dataset expands to all 14 cities in Gansu Province, 
+    this module will run a random-effects meta analysis across city-specific log(RR) estimations.
     
     Inputs:
     site_results is a list of dictionaries, one per site:
@@ -52,4 +55,4 @@ def run_meta_analysis(site_results):
     return agg_result
 
 if __name__ == "__main__":
-    print("Multi-site meta-analysis module initialized.")
+    print("Multi-site meta-analysis module initialized (Reserved for Gansu expansion).")

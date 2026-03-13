@@ -6,16 +6,21 @@ try:
 except ImportError:
     print("statsmodels and pygam are required for GAM modeling.")
 
-def prep_gam_dataset(health_counts, event_object_metrics, weather_df):
+from health_data_loader import load_aligned_dataset
+
+def prep_gam_dataset():
     """
-    Merge the daily health occurrences with event metrics and meteorological controls.
+    Load the merged daily health occurrences (e.g. Measles cases) with event metrics/meteorology.
+    Assumes 0-14 days lag is handled either via shifted columns or externally.
     """
-    df = pd.merge(health_counts, event_object_metrics, on='date', how='left')
-    df = pd.merge(df, weather_df, on='date', how='left')
+    df = load_aligned_dataset()
+    if df is None:
+        return None
     
     # Fill event intensity with 0 where no event is detected
-    df['event_intensity_pm10'] = df['event_intensity_pm10'].fillna(0)
-    df['is_event_day'] = (df['event_intensity_pm10'] > 0).astype(int)
+    if 'pm10_daily_mean' in df.columns:
+        df['pm10_daily_mean'] = df['pm10_daily_mean'].fillna(0)
+        df['is_event_day'] = (df['pm10_daily_mean'] > 0).astype(int)
     
     # DOW and Holiday controls
     df['day_of_week'] = pd.to_datetime(df['date']).dt.dayofweek
@@ -24,18 +29,19 @@ def prep_gam_dataset(health_counts, event_object_metrics, weather_df):
     # Time index for long-term trend
     df['time'] = np.arange(len(df))
     
-    return df.dropna(subset=['outcome_count', 'temp_mean', 'rh_mean'])
+    # Expect measles_cases as the primary outcome
+    return df.dropna(subset=['measles_cases', 'temp_mean', 'rh_mean'])
 
 def fit_baseline_gam(df_gam):
     """
     Fit a baseline Poisson GAM:
-    log(E[Y_t]) = alpha + beta * Event_t + s(Time) + s(Temp) + s(RH) + DOW + Holiday
+    log(E[Measles_t]) = alpha + beta * PM10_event_t + s(Time) + s(Temp) + s(RH) + DOW + Holiday
     """
-    if 'outcome_count' not in df_gam.columns:
-        raise ValueError("Missing 'outcome_count' in DataFrame")
+    if 'measles_cases' not in df_gam.columns:
+        raise ValueError("Missing 'measles_cases' in DataFrame")
         
-    X = df_gam[['time', 'temp_mean', 'rh_mean', 'event_intensity_pm10', 'day_of_week', 'holiday']]
-    y = df_gam['outcome_count']
+    X = df_gam[['time', 'temp_mean', 'rh_mean', 'pm10_daily_mean', 'day_of_week', 'holiday']]
+    y = df_gam['measles_cases']
 
     # Using pyGAM
     # We apply: spline on time (seasonality/trend), spline on temp/RH, linear on event intensity, factor on categorical DOW/Holiday
@@ -55,4 +61,5 @@ def extract_gam_results(gam, df_gam):
     return summary
 
 if __name__ == "__main__":
-    print("GAM boilerplate script ready. Will integrate with EventObjects seamlessly.")
+    print("--- Phase 2: GAM Baseline Modeling ---")
+    print("GAM boilerplate script ready. Will integrate with Lanzhou daily Measles datasets seamlessly.")

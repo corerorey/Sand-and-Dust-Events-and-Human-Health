@@ -14,7 +14,7 @@ for (pkg in required_packages) {
 }
 
 
-fit_dlnm <- function(df, outcome_var, exposure_var, max_lag = 7) {
+fit_dlnm <- function(df, outcome_var='measles_cases', exposure_var='pm10_daily_mean', max_lag = 14) {
   
   # 1. Define the cross-basis for the exposure
   # Using a natural cubic spline for the exposure-response and for the lag-response
@@ -41,5 +41,7 @@ fit_dlnm <- function(df, outcome_var, exposure_var, max_lag = 7) {
   return(list(model=model, crossbasis=cb_exposure, predictions=pred_exposure))
 }
 
-# Typical use would involve saving the daily dataset from Python to CSV,
-# running this DLNM script, and extracting the 3D surface matrix back to Python.
+# Typical use sequence:
+# 1. Output the daily `measles_cases` and `pm10_daily_mean` via Python `health_data_loader.py` to CSV.
+# 2. Run this DLNM script (max_lag=14 as standard) in R.
+# 3. Extract the computed 3D surface matrix and relative risks (RRs) back to Python for plotting.
