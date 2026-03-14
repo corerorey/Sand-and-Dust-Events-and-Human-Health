@@ -112,10 +112,32 @@ python health_modeling/causal_refutation_tests.py
 
 ---
 
-## 4. References
+## 4. Data Resources
 
-[1] Lian L, et al. A comprehensive review of dust events: Characteristics, climate feedbacks, and public health risks. *Current Pollution Reports*, 2025.
-[2] Zhang C, et al. Mortality risks from a spectrum of causes associated with sand and dust storms in China. *Nature Communications*, 2023.
-[3] Ma Y, et al. Assessment for the impact of dust events on measles incidence in western China. *Atmospheric Environment*, 2017.
-[4] Kang Q, et al. Machine learning-aided causal inference framework for environmental data analysis: A COVID-19 case study. *Environmental Science & Technology*, 2021.
-[5] Peng L, et al. The effects of air pollution and meteorological factors on measles cases in lanzhou, China. *Environmental Science and Pollution Research*, 2020.
+- **ERA5**: European Centre for Medium-Range Weather Forecasts (ECMWF) Copernicus Climate Change Service (C3S) Climate Data Store (CDS).
+- **MERRA-2**: Global Modeling and Assimilation Office (GMAO), NASA Goddard Earth Sciences Data and Information Services Center (GES DISC).
+- **Himawari-8**: Japan Meteorological Agency (JMA) via NICT Science Cloud.
+- **CNEMC Air Quality Data**: China National Environmental Monitoring Centre (CNEMC).
+- **Lanzhou Measles Data**: [Pending Data Authorization] Daily notifiable infectious disease incidence counts.
+
+---
+
+## 5. References
+
+[1] Lian L, Huang J, Chen S, Du S, Zhang L, Yang J. A comprehensive review of dust events: Characteristics, climate feedbacks, and public health risks[J]. Current Pollution Reports, 2025, 11(1): 18.
+
+[2] Wang S, Yuan W, Shang K. The impacts of different kinds of dust events on PM10 pollution in northern China[J]. Atmospheric Environment, 2006, 40(40): 7975-7982.
+
+[3] Zhang C, Yan M, Du H, Ban J, Chen C, Liu Y, Li T. Mortality risks from a spectrum of causes associated with sand and dust storms in China[J]. Nature Communications, 2023, 14(1): 6867.
+
+[4] Manisalidis I, Stavropoulou E, Stavropoulos A, Bezirtzoglou E. Environmental and health impacts of air pollution: A review[J]. Frontiers in Public Health, 2020, 8: 14.
+
+[5] Ma Y, Zhou J, Yang S, Zhao Y, Zheng X. Assessment for the impact of dust events on measles incidence in western China[J]. Atmospheric Environment, 2017, 157: 1-9.
+
+[6] Peng L, Zhao X, Tao Y, Mi S, Huang J, Zhang Q. The effects of air pollution and meteorological factors on measles cases in lanzhou, China[J]. Environmental Science and Pollution Research, 2020, 27(12): 13524-13533.
+
+[7] Kang Q, Song X, Xin X, Chen B, Chen Y, Ye X, Zhang B. Machine learning-aided causal inference framework for environmental data analysis: A COVID-19 case study[J]. Environmental Science & Technology, 2021.
+
+[8] Silver B, Reddington C L, Chen Y, Arnold S R. A decade of China’s air quality monitoring data suggests health impacts are no longer declining[J]. Environment International, 2025, 197: 109318.
+
+
